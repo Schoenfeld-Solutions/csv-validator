@@ -1,0 +1,8 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "types": ["vitest/globals"],
+    "strict": true
+  },
+  "include": ["src", "tests", "tools", "astro.config.mjs", "vitest.config.ts", "playwright.config.ts", "eslint.config.js"]
+}

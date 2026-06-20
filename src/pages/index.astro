@@ -1,0 +1,40 @@
+---
+import Dropzone from '../components/Dropzone.astro';
+import ResultSummary from '../components/ResultSummary.astro';
+import SupportedFormats from '../components/SupportedFormats.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import '../styles/site.css';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Independent browser-only DATEV CSV file validator." />
+    <title>DATEV CSV file validator</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+  </head>
+  <body>
+    <main>
+      <ThemeToggle />
+      <h1>DATEV CSV file validator</h1>
+      <p class="disclaimer"><strong>Independent open-source tool. Not affiliated with DATEV eG.</strong></p>
+      <p class="disclaimer">Provided as-is and without warranty.</p>
+      <Dropzone />
+      <SupportedFormats />
+      <ResultSummary />
+      <section>
+        <h2>About / Disclaimer</h2>
+        <p class="disclaimer">Independent open-source tool. Not affiliated with DATEV eG.</p>
+        <p class="disclaimer">Provided as-is and without warranty. Use at your own risk.</p>
+      </section>
+      <footer class="disclaimer">
+        This validator runs only in your browser, does not upload files, and is provided as-is without any warranties.
+      </footer>
+    </main>
+    <script type="module">
+      import '../scripts/app.ts';
+    </script>
+  </body>
+</html>

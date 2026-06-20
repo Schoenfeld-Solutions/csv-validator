@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #4b5563;
+  --border: #d1d5db;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --fg: #f9fafb;
+  --muted: #cbd5e1;
+  --border: #334155;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 0.6rem;
+  padding: 1rem;
+}
+
+.dropzone.is-over {
+  border-color: #2563eb;
+}
+
+.disclaimer {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
