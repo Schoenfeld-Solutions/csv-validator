@@ -18,6 +18,10 @@ echo "==> Dependency audit"
 npm run audit:ci
 
 echo
+echo "==> Repository governance"
+npm run check:governance
+
+echo
 echo "==> Format check"
 npm run format:check
 

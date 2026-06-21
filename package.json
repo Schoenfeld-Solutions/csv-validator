@@ -29,6 +29,7 @@
     "build": "astro build",
     "check": "npm run preflight",
     "check:ci": "npm run preflight",
+    "check:governance": "node scripts/check-repo-governance.mjs",
     "check:public-copy": "node scripts/check-public-copy.mjs",
     "check:pr-title": "node scripts/check-pr-title.mjs",
     "dev": "astro dev",
