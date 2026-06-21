@@ -1,0 +1,78 @@
+{
+  "name": "csv-validator",
+  "version": "0.1.0",
+  "description": "Client-side DATEV CSV structure validator for GitHub Pages.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.9.0",
+  "author": "Schoenfeld Solutions (https://schoenfeld.solutions)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Schoenfeld-Solutions/csv-validator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Schoenfeld-Solutions/csv-validator/issues"
+  },
+  "homepage": "https://schoenfeld-solutions.github.io/csv-validator/",
+  "engines": {
+    "node": ">=25.0.0",
+    "npm": ">=11.0.0"
+  },
+  "volta": {
+    "node": "25.6.1",
+    "npm": "11.9.0"
+  },
+  "scripts": {
+    "astro": "astro",
+    "audit:ci": "npm audit --audit-level=low",
+    "build": "astro build",
+    "check": "npm run preflight",
+    "check:ci": "npm run preflight",
+    "check:governance": "node scripts/check-repo-governance.mjs",
+    "check:public-copy": "node scripts/check-public-copy.mjs",
+    "check:pr-title": "node scripts/check-pr-title.mjs",
+    "dev": "astro dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "preflight": "bash bin/checks/preflight.sh",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:lighthouse": "node scripts/lighthouse-check.mjs",
+    "typecheck": "astro check && tsc --noEmit"
+  },
+  "dependencies": {
+    "astro": "^6.4.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.0",
+    "@types/node": "^26.0.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "astro-eslint-parser": "^1.4.0",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^1.7.0",
+    "lighthouse": "12.6.1",
+    "prettier": "^3.8.4",
+    "prettier-plugin-astro": "^0.14.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "esbuild": "0.28.1",
+    "yaml-language-server": "1.23.0"
+  },
+  "prettier": {
+    "plugins": [
+      "prettier-plugin-astro"
+    ],
+    "singleQuote": false,
+    "trailingComma": "es5"
+  }
+}

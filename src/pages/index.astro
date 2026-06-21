@@ -1,0 +1,73 @@
+---
+import { basePath, routeFor } from "../lib/i18n";
+
+const baseUrl = import.meta.env.BASE_URL;
+const deHref = basePath(baseUrl, routeFor("de", "home"));
+const enHref = basePath(baseUrl, routeFor("en", "home"));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex,follow" />
+    <title>DATEV CSV Validator</title>
+    <script is:inline define:vars={{ deHref, enHref }}>
+      (() => {
+        const languages =
+          Array.isArray(navigator.languages) && navigator.languages.length > 0
+            ? navigator.languages
+            : [navigator.language || ""];
+        const primaryLanguage = String(languages[0] || "").toLowerCase();
+        const targetPath = primaryLanguage.startsWith("de") ? deHref : enHref;
+        const targetUrl = new URL(targetPath, window.location.origin);
+        targetUrl.search = window.location.search;
+        targetUrl.hash = window.location.hash;
+        window.location.replace(targetUrl.href);
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      body {
+        align-items: center;
+        display: grid;
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 42rem;
+      }
+
+      a {
+        color: currentColor;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <noscript>
+        <h1>DATEV CSV Validator</h1>
+        <p>
+          Browser language detection requires JavaScript. Choose a language:
+        </p>
+        <p>
+          <a href={deHref}>Deutsch</a> · <a href={enHref}>English</a>
+        </p>
+      </noscript>
+    </main>
+  </body>
+</html>

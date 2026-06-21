@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DATEV CSV Validator">
+  <rect width="64" height="64" rx="12" fill="#f7faf8" />
+  <path d="M18 7h24l10 10v40H18z" fill="#fff" stroke="#176b5b" stroke-width="3" stroke-linejoin="round" />
+  <path d="M42 7v10h10" fill="none" stroke="#176b5b" stroke-width="3" stroke-linejoin="round" />
+  <path d="M25 29h16M25 37h10" fill="none" stroke="#176b5b" stroke-width="3" stroke-linecap="round" />
+  <path d="m38 44 4 4 9-12" fill="none" stroke="#0e4d40" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

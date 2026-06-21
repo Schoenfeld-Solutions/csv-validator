@@ -1,0 +1,88 @@
+---
+import { SUPPORTED_FORMATS } from "../lib/datev/contracts";
+import { type Locale } from "../lib/i18n";
+
+type Props = {
+  locale: Locale;
+};
+
+const { locale } = Astro.props;
+const copy =
+  locale === "de"
+    ? {
+        title: "Unterstützte Formate",
+        intro:
+          "Der Validator arbeitet fail-closed. Unterstützt werden nur diese versionierten lokalen DATEV-CSV-Strukturverträge.",
+        category: "Kategorie",
+        name: "Name",
+        version: "Version",
+        markers: "Marker",
+        checkedTitle: "Was geprüft wird",
+        checked:
+          "CSV-Lexik, Encoding-Policy, DATEV-Marker, Header-Version, unterstützte Signatur, Caption-Anzahl und Reihenfolge, Feldanzahl je Datenzeile, Pflichtfelder, Basistypen, Längen, Dezimalstellen und unterstützte Datumsformen.",
+        notCheckedTitle: "Was nicht geprüft wird",
+        notChecked:
+          "Keine offizielle DATEV-Blackbox-Prüfung, keine Steuer- oder Buchhaltungsberatung, keine CalculationRule-Engine, keine AdditionalValidationRules, keine Cross-Record-Buchungslogik und keine Garantie, dass DATEV-Produkte dieselbe Entscheidung treffen.",
+      }
+    : {
+        title: "Supported formats",
+        intro:
+          "The validator works fail-closed. Only these versioned local DATEV CSV structural contracts are supported.",
+        category: "Category",
+        name: "Name",
+        version: "Version",
+        markers: "Markers",
+        checkedTitle: "What is checked",
+        checked:
+          "CSV lexing, encoding policy, DATEV marker, header version, supported signature, caption count and order, data row field count, required fields, basic field types, lengths, decimals and supported date expressions.",
+        notCheckedTitle: "What is not checked",
+        notChecked:
+          "No official DATEV blackbox run, no tax or accounting advice, no CalculationRule engine, no AdditionalValidationRules, no cross-record booking logic and no guarantee that DATEV products make the same decision.",
+      };
+---
+
+<section class="page-shell">
+  <header class="page-header">
+    <h1>{copy.title}</h1>
+    <p>{copy.intro}</p>
+  </header>
+
+  <div class="format-list">
+    {
+      SUPPORTED_FORMATS.map((format) => (
+        <article class="format-card">
+          <h2>{format.recognitionCode}</h2>
+          <dl>
+            <div>
+              <dt>{copy.category}</dt>
+              <dd>{format.formatCategory}</dd>
+            </div>
+            <div>
+              <dt>{copy.name}</dt>
+              <dd>{format.formatName}</dd>
+            </div>
+            <div>
+              <dt>{copy.version}</dt>
+              <dd>{format.formatVersion}</dd>
+            </div>
+            <div>
+              <dt>{copy.markers}</dt>
+              <dd>{format.allowedDatevMarkers.join(", ")}</dd>
+            </div>
+          </dl>
+        </article>
+      ))
+    }
+  </div>
+
+  <section class="content-grid" aria-label="Validation scope">
+    <article class="text-panel">
+      <h2>{copy.checkedTitle}</h2>
+      <p>{copy.checked}</p>
+    </article>
+    <article class="text-panel">
+      <h2>{copy.notCheckedTitle}</h2>
+      <p>{copy.notChecked}</p>
+    </article>
+  </section>
+</section>

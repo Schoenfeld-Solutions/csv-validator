@@ -1,0 +1,245 @@
+---
+import { appCopy, type Locale } from "../lib/i18n";
+
+type Props = {
+  locale: Locale;
+};
+
+const { locale } = Astro.props;
+const copy = appCopy[locale];
+---
+
+<section class="validator-stage" aria-labelledby="validator-title">
+  <h1 class="visually-hidden" aria-hidden="true">{copy.title}</h1>
+
+  <section class="validator-panel" aria-label={copy.title}>
+    <label class="dropzone" id="dropzone" for="fileInput">
+      <span class="dropzone-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <path
+            d="M18 6h20l10 10v42H18z"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linejoin="round"></path>
+          <path d="M38 6v10h10" stroke="currentColor" stroke-width="3"></path>
+          <path
+            d="M25 30h14M25 38h9"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"></path>
+          <path
+            d="m37 42 4 4 8-10"
+            stroke="currentColor"
+            stroke-width="3.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+      </span>
+      <span
+        id="validator-title"
+        class="dropzone-heading"
+        role="heading"
+        aria-level="1">{copy.title}</span
+      >
+      <span class="dropzone-title">{copy.dropTitle}</span>
+      <span class="dropzone-copy">{copy.dropCopy}</span>
+      <span class="button-like">{copy.chooseFile}</span>
+    </label>
+    <input
+      class="visually-hidden"
+      id="fileInput"
+      type="file"
+      accept=".csv,.txt,text/csv,text/plain"
+    />
+
+    <div class="status-line" id="statusLine" role="status" aria-live="polite">
+      {copy.waiting}
+    </div>
+
+    <section
+      class="result-panel"
+      id="resultPanel"
+      aria-labelledby="result-title"
+      hidden
+    >
+      <div class="result-heading">
+        <div>
+          <p class="section-kicker">{copy.resultKicker}</p>
+          <h2 id="result-title">{copy.resultTitle}</h2>
+        </div>
+        <span class="result-badge" id="resultBadge">{copy.ready}</span>
+      </div>
+
+      <p class="result-statement" id="resultStatement"></p>
+
+      <dl class="meta-grid" aria-label="Detected metadata">
+        <div>
+          <dt>{copy.metadata.recognition}</dt>
+          <dd id="metaRecognition">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.format}</dt>
+          <dd id="metaFormat">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.marker}</dt>
+          <dd id="metaMarker">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.encoding}</dt>
+          <dd id="metaEncoding">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.delimiter}</dt>
+          <dd id="metaDelimiter">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.rows}</dt>
+          <dd id="metaRows">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.dataRows}</dt>
+          <dd id="metaDataRows">-</dd>
+        </div>
+        <div>
+          <dt>{copy.metadata.fields}</dt>
+          <dd id="metaFields">-</dd>
+        </div>
+      </dl>
+
+      <div class="result-actions">
+        <button
+          class="secondary-action"
+          id="copyJsonButton"
+          type="button"
+          disabled
+        >
+          {copy.actions.copy}
+        </button>
+        <button
+          class="secondary-action"
+          id="downloadJsonButton"
+          type="button"
+          disabled
+        >
+          {copy.actions.download}
+        </button>
+        <span id="copyStatus" class="copy-status" aria-live="polite"></span>
+      </div>
+
+      <div class="diagnostics-card">
+        <div class="diagnostics-heading">
+          <h3>{copy.diagnostics.title}</h3>
+          <span id="diagnosticSummary">{copy.diagnostics.summary(0, 0)}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{copy.diagnostics.severity}</th>
+                <th scope="col">{copy.diagnostics.code}</th>
+                <th scope="col">{copy.diagnostics.line}</th>
+                <th scope="col">{copy.diagnostics.column}</th>
+                <th scope="col">{copy.diagnostics.field}</th>
+                <th scope="col">{copy.diagnostics.message}</th>
+              </tr>
+            </thead>
+            <tbody id="diagnosticsBody">
+              <tr>
+                <td colspan="6">{copy.diagnostics.empty}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <section class="trust-block" aria-label="Privacy guarantees">
+    <p>{copy.trust.intro}</p>
+    <ul class="trust-list">
+      {
+        copy.trust.items.map((item, index) => (
+          <li>
+            <span class="trust-icon" aria-hidden="true">
+              {index === 0 && (
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 3 5 6v5c0 4.2 2.6 7.8 7 10 4.4-2.2 7-5.8 7-10V6z"
+                    stroke="currentColor"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="m8.8 12.1 2.1 2.1 4.4-4.7"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              )}
+              {index === 1 && (
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M7 10V8a5 5 0 0 1 10 0v2"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M6 10h12v10H6z"
+                    stroke="currentColor"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M12 14v2"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              )}
+              {index === 2 && (
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 3 21 21"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M10.7 5.2A10.8 10.8 0 0 1 12 5c5 0 8.5 4.3 10 7a17.7 17.7 0 0 1-3.1 4.1"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M14.1 14.1A3 3 0 0 1 9.9 9.9"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M6.4 6.5A17 17 0 0 0 2 12c1.5 2.7 5 7 10 7a10.7 10.7 0 0 0 4.1-.8"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+              )}
+            </span>
+            <span>{item}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</section>
+
+<script>
+  import "../scripts/app";
+</script>
