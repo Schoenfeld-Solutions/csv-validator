@@ -1,0 +1,293 @@
+---
+import { type Locale } from "../lib/i18n";
+
+type LegalKind = "privacy" | "imprint" | "disclaimer";
+type Props = {
+  kind: LegalKind;
+  locale: Locale;
+};
+
+const { kind, locale } = Astro.props;
+const isGerman = locale === "de";
+---
+
+<section class="page-shell legal-page">
+  {
+    kind === "imprint" && isGerman && (
+      <>
+        <header class="page-header">
+          <h1>Impressum</h1>
+          <p>Angaben gemäß § 5 TMG.</p>
+        </header>
+        <article class="text-panel prose-panel">
+          <h2>Anbieter</h2>
+          <p>
+            Gabriel-Johannes Schönfeld
+            <br />
+            Schoenfeld Solutions
+            <br />
+            Friedhofweg 4
+            <br />
+            71540 Murrhardt
+            <br />
+            Deutschland
+          </p>
+          <h2>Kontakt</h2>
+          <p>
+            Telefon: +49 7192 2172725
+            <br />
+            Telefax: +49 3222 8885376
+            <br />
+            E-Mail:{" "}
+            <a href="mailto:compliance@schoenfeld-solutions.com">
+              compliance@schoenfeld-solutions.com
+            </a>
+          </p>
+          <h2>Umsatzsteuer-ID</h2>
+          <p>DE354493354</p>
+          <h2>Redaktionell verantwortlich</h2>
+          <p>
+            Gabriel-Johannes Schönfeld
+            <br />
+            Friedhofweg 4
+            <br />
+            71540 Murrhardt
+          </p>
+          <h2>Streitbeilegung</h2>
+          <p>
+            Wir sind nicht bereit oder verpflichtet, an
+            Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+            teilzunehmen.
+          </p>
+        </article>
+      </>
+    )
+  }
+
+  {
+    kind === "imprint" && !isGerman && (
+      <>
+        <header class="page-header">
+          <h1>Imprint</h1>
+          <p>Provider information. The German legal text is authoritative.</p>
+        </header>
+        <article class="text-panel prose-panel">
+          <h2>Provider</h2>
+          <p>
+            Gabriel-Johannes Schönfeld
+            <br />
+            Schoenfeld Solutions
+            <br />
+            Friedhofweg 4
+            <br />
+            71540 Murrhardt
+            <br />
+            Germany
+          </p>
+          <h2>Contact</h2>
+          <p>
+            Phone: +49 7192 2172725
+            <br />
+            Fax: +49 3222 8885376
+            <br />
+            Email:{" "}
+            <a href="mailto:compliance@schoenfeld-solutions.com">
+              compliance@schoenfeld-solutions.com
+            </a>
+          </p>
+          <h2>VAT ID</h2>
+          <p>DE354493354</p>
+          <h2>Responsible for editorial content</h2>
+          <p>
+            Gabriel-Johannes Schönfeld
+            <br />
+            Friedhofweg 4
+            <br />
+            71540 Murrhardt
+          </p>
+          <h2>Consumer dispute resolution</h2>
+          <p>
+            We are neither willing nor obliged to participate in dispute
+            resolution proceedings before a consumer arbitration board.
+          </p>
+        </article>
+      </>
+    )
+  }
+
+  {
+    kind === "privacy" && isGerman && (
+      <>
+        <header class="page-header">
+          <h1>Datenschutz</h1>
+          <p>
+            Diese Hinweise beschreiben die Datenverarbeitung für dieses
+            statische GitHub-Pages-Tool.
+          </p>
+        </header>
+        <article class="text-panel prose-panel">
+          <h2>Verantwortliche Stelle</h2>
+          <p>
+            Gabriel-Johannes Schönfeld, Schoenfeld Solutions, Friedhofweg 4,
+            71540 Murrhardt, Deutschland. Kontakt:{" "}
+            <a href="mailto:compliance@schoenfeld-solutions.com">
+              compliance@schoenfeld-solutions.com
+            </a>
+            .
+          </p>
+          <h2>Lokale Datei-Verarbeitung</h2>
+          <p>
+            DATEV-CSV-Dateien werden ausschließlich im Browser verarbeitet. Die
+            Datei wird nicht an Schoenfeld Solutions übertragen. Es gibt keinen
+            Server-Endpunkt, der CSV-Dateien empfängt, speichert oder
+            analysiert.
+          </p>
+          <h2>Keine Telemetrie</h2>
+          <p>
+            Diese Seite nutzt keine Analytics, kein Tracking, keine externen
+            Fonts und keine Telemetrie. JSON-Berichte werden nur erzeugt, wenn
+            Sie sie ausdrücklich kopieren oder herunterladen.
+          </p>
+          <h2>Hosting über GitHub Pages</h2>
+          <p>
+            Die statischen Dateien werden über GitHub Pages bereitgestellt. Beim
+            Abruf der Website können technisch notwendige Zugriffsdaten durch
+            GitHub verarbeitet werden. Details finden Sie in der{" "}
+            <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">
+              GitHub Privacy Statement
+            </a>
+            .
+          </p>
+          <h2>Ihre Rechte</h2>
+          <p>
+            Sie können Auskunft, Berichtigung, Löschung, Einschränkung der
+            Verarbeitung und Beschwerde bei einer Aufsichtsbehörde verlangen,
+            soweit die gesetzlichen Voraussetzungen vorliegen.
+          </p>
+        </article>
+      </>
+    )
+  }
+
+  {
+    kind === "privacy" && !isGerman && (
+      <>
+        <header class="page-header">
+          <h1>Privacy Policy</h1>
+          <p>
+            These notes describe data processing for this static GitHub Pages
+            tool. The German legal text is authoritative.
+          </p>
+        </header>
+        <article class="text-panel prose-panel">
+          <h2>Controller</h2>
+          <p>
+            Gabriel-Johannes Schönfeld, Schoenfeld Solutions, Friedhofweg 4,
+            71540 Murrhardt, Germany. Contact:{" "}
+            <a href="mailto:compliance@schoenfeld-solutions.com">
+              compliance@schoenfeld-solutions.com
+            </a>
+            .
+          </p>
+          <h2>Local file processing</h2>
+          <p>
+            DATEV CSV files are processed only in your browser. The file is not
+            transmitted to Schoenfeld Solutions. There is no server endpoint
+            receiving, storing or analyzing CSV files.
+          </p>
+          <h2>No telemetry</h2>
+          <p>
+            This site uses no analytics, no tracking, no external fonts and no
+            telemetry. JSON reports are created only when you explicitly copy or
+            download them.
+          </p>
+          <h2>Hosting via GitHub Pages</h2>
+          <p>
+            The static files are served through GitHub Pages. When the website
+            is requested, technically necessary access data may be processed by
+            GitHub. See the{" "}
+            <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">
+              GitHub Privacy Statement
+            </a>
+            for details.
+          </p>
+          <h2>Your rights</h2>
+          <p>
+            You may request access, rectification, deletion, restriction of
+            processing and lodge a complaint with a supervisory authority where
+            the legal requirements apply.
+          </p>
+        </article>
+      </>
+    )
+  }
+
+  {
+    kind === "disclaimer" && isGerman && (
+      <>
+        <header class="page-header">
+          <h1>Haftung und Einordnung</h1>
+          <p>
+            Unabhängiges Tool, lokale Strukturprüfung, keine Gewährleistung.
+          </p>
+        </header>
+        <article class="text-panel prose-panel">
+          <h2>Unabhängigkeit</h2>
+          <p>
+            Dieses Open-Source-Tool ist unabhängig. Es ist nicht mit DATEV eG
+            verbunden, nicht von DATEV eG autorisiert und verwendet keine
+            DATEV-Logos oder Markenassets.
+          </p>
+          <h2>Keine Zusage einer DATEV-Akzeptanz</h2>
+          <p>
+            Ein gültiges Ergebnis bedeutet nur, dass eine Datei dem
+            implementierten lokalen DATEV-CSV-Strukturvertrag entspricht. Es
+            bedeutet nicht, dass eine DATEV-Anwendung die Datei akzeptiert.
+          </p>
+          <h2>Keine Beratung</h2>
+          <p>
+            Das Tool ersetzt keine steuerliche, buchhalterische oder rechtliche
+            Beratung und keine Prüfung durch offizielle DATEV-Werkzeuge.
+          </p>
+          <h2>As-is</h2>
+          <p>
+            Das Tool wird ohne Gewährleistung bereitgestellt. Die Nutzung
+            erfolgt auf eigenes Risiko.
+          </p>
+        </article>
+      </>
+    )
+  }
+
+  {
+    kind === "disclaimer" && !isGerman && (
+      <>
+        <header class="page-header">
+          <h1>Disclaimer</h1>
+          <p>Independent tool, local structural check, no warranty.</p>
+        </header>
+        <article class="text-panel prose-panel">
+          <h2>Independence</h2>
+          <p>
+            This open-source tool is independent. It is not affiliated with
+            DATEV eG, not authorized by DATEV eG and uses no DATEV logos or
+            brand assets.
+          </p>
+          <h2>No DATEV acceptance guarantee</h2>
+          <p>
+            A valid result only means that a file matches the implemented local
+            DATEV CSV structural contract. It does not mean that a DATEV
+            application will accept the file.
+          </p>
+          <h2>No advice</h2>
+          <p>
+            The tool does not replace tax, accounting or legal advice and does
+            not replace validation by official DATEV tools.
+          </p>
+          <h2>As-is</h2>
+          <p>The tool is provided without warranty. Use it at your own risk.</p>
+        </article>
+      </>
+    )
+  }
+</section>

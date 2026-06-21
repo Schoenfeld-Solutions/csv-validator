@@ -1,0 +1,106 @@
+---
+import SiteHeader from "../components/SiteHeader.astro";
+import {
+  basePath,
+  defaultLocale,
+  routeFor,
+  siteCopy,
+  type Locale,
+  type PageKey,
+} from "../lib/i18n";
+import "../styles/global.css";
+
+type Props = {
+  activePage?: PageKey;
+  description: string;
+  locale?: Locale;
+  title: string;
+};
+
+const {
+  activePage = "home",
+  description,
+  locale = defaultLocale,
+  title,
+} = Astro.props;
+const baseUrl = import.meta.env.BASE_URL;
+const route = routeFor(locale, activePage);
+const siteOrigin =
+  Astro.site ?? new URL("https://schoenfeld-solutions.github.io");
+const absoluteUrl = (path: string) =>
+  new URL(basePath(baseUrl, path), siteOrigin).href;
+const canonicalUrl = absoluteUrl(route);
+const deAlternate = absoluteUrl(routeFor("de", activePage));
+const enAlternate = absoluteUrl(routeFor("en", activePage));
+const xDefault = deAlternate;
+const copy = siteCopy[locale];
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f7faf8" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" hreflang="de" href={deAlternate} />
+    <link rel="alternate" hreflang="en" href={enAlternate} />
+    <link rel="alternate" hreflang="x-default" href={xDefault} />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href={`${import.meta.env.BASE_URL}favicon.svg`}
+    />
+    <title>{title}</title>
+    <script is:inline>
+      (() => {
+        const getSystemTheme = () => {
+          if (typeof window.matchMedia !== "function") return "light";
+          return window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        };
+
+        try {
+          const savedTheme = localStorage.getItem("csv-validator-theme");
+          if (savedTheme === "light" || savedTheme === "dark") {
+            document.documentElement.dataset.theme = savedTheme;
+            document.documentElement.dataset.themeSource = "saved";
+            return;
+          }
+
+          document.documentElement.dataset.theme = getSystemTheme();
+          document.documentElement.dataset.themeSource = "system";
+        } catch {
+          document.documentElement.dataset.theme = "light";
+          document.documentElement.dataset.themeSource = "fallback";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <SiteHeader locale={locale} activePage={activePage} />
+    <main id="main-content">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <a href={basePath(baseUrl, routeFor(locale, "imprint"))}
+        >{copy.nav.imprint}</a
+      >
+      <a href={basePath(baseUrl, routeFor(locale, "privacy"))}
+        >{copy.nav.privacy}</a
+      >
+      <a href={basePath(baseUrl, routeFor(locale, "disclaimer"))}
+        >{copy.nav.disclaimer}</a
+      >
+      <span>{copy.footer.owner}</span>
+      <span>{copy.footer.independent}</span>
+      <span>{copy.footer.warranty}</span>
+    </footer>
+    <script>
+      import "../scripts/theme";
+    </script>
+  </body>
+</html>
