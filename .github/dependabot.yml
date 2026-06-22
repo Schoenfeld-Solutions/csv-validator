@@ -46,6 +46,10 @@ updates:
     ignore:
       - dependency-name: "lighthouse"
         versions:
+          - "12.7.0"
+          - "12.7.1"
+          - "12.8.0"
+          - "12.8.1"
           - "12.8.2"
       - dependency-name: "*"
         update-types:
