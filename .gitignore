@@ -5,6 +5,7 @@ coverage/
 playwright-report/
 test-results/
 .local/
+docs/plans/
 
 .DS_Store
 *.log

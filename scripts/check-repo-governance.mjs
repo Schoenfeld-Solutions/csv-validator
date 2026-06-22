@@ -159,7 +159,9 @@ const validateIgnores = async () => {
   const gitignore = await readText(".gitignore");
   const prettierignore = await readText(".prettierignore");
   requireSnippet(".gitignore", gitignore, ".local/");
+  requireSnippet(".gitignore", gitignore, "docs/plans/");
   requireSnippet(".prettierignore", prettierignore, ".local");
+  requireSnippet(".prettierignore", prettierignore, "docs/plans");
 };
 
 const validatePackageScripts = async () => {
@@ -242,6 +244,14 @@ const validateTrackedFiles = async () => {
   if (trackedLocalFiles.length > 0) {
     errors.push(
       `.local files must not be tracked: ${trackedLocalFiles.join(", ")}`
+    );
+  }
+  const trackedPlanFiles = trackedFiles.filter((path) =>
+    path.startsWith("docs/plans/")
+  );
+  if (trackedPlanFiles.length > 0) {
+    errors.push(
+      `Local planning files must not be tracked: ${trackedPlanFiles.join(", ")}`
     );
   }
 
