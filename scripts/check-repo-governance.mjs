@@ -252,19 +252,50 @@ const validateMarkdownLanguage = async () => {
       pattern: /\bblackbox\b/i,
       reason: "unclear legacy validation terminology",
     },
-    {
-      pattern: /\/Users\/Gabriel\/Repositories\/Normec/i,
-      reason: "local partner repository path",
-    },
-    {
-      pattern: /com\.datev\.validator/i,
-      reason: "internal partner repository name",
-    },
   ];
 
   for (const path of trackedMarkdownFiles) {
     const text = await readText(path);
     for (const { pattern, reason } of forbiddenMarkdownPatterns) {
+      if (pattern.test(text)) {
+        errors.push(`${path} contains ${reason}`);
+      }
+    }
+  }
+};
+
+const validateTrackedTextContent = async () => {
+  const { stdout } = await execFileAsync("git", ["ls-files"], {
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  const trackedTextFiles = stdout
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((path) => !path.startsWith("docs/plans/"))
+    .filter((path) => !path.startsWith(".local/"))
+    .filter((path) =>
+      /\.(astro|css|html|js|json|md|mjs|sh|ts|tsx|yml|yaml)$/i.test(path)
+    )
+    .filter((path) => path !== "package-lock.json");
+
+  const internalRepositoryNamePattern = new RegExp(
+    ["com", "datev", "validator"].join("\\."),
+    "i"
+  );
+  const forbiddenTextPatterns = [
+    {
+      pattern: /\/Users\/[^/\s"'`<>()]+\/Repositories\/[^/\s"'`<>()]+/i,
+      reason: "local absolute repository path",
+    },
+    {
+      pattern: internalRepositoryNamePattern,
+      reason: "internal reference repository name",
+    },
+  ];
+
+  for (const path of trackedTextFiles) {
+    const text = await readText(path);
+    for (const { pattern, reason } of forbiddenTextPatterns) {
       if (pattern.test(text)) {
         errors.push(`${path} contains ${reason}`);
       }
@@ -324,6 +355,7 @@ await validatePackageScripts();
 await validatePreflight();
 await validateDocumentation();
 await validateMarkdownLanguage();
+await validateTrackedTextContent();
 await validateTrackedFiles();
 
 if (errors.length > 0) {

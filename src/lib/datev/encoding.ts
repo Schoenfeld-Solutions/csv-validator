@@ -61,13 +61,23 @@ export const detectAndDecodeBytes = (bytes: Uint8Array): DecodeResult => {
     };
   }
 
+  try {
+    return {
+      content: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      diagnostics: [],
+      encoding: "utf-8",
+    };
+  } catch {
+    // Fall through to the deterministic DATEV-compatible legacy fallback.
+  }
+
   return {
     content: new TextDecoder("windows-1252").decode(bytes),
     diagnostics: [
       diagnostic(
         "warning",
         "ENCODING_ASSUMED_WINDOWS_1252",
-        "No UTF-8 BOM was found. The file was decoded deterministically as Windows-1252."
+        "The file is not valid UTF-8. It was decoded deterministically as Windows-1252."
       ),
     ],
     encoding: "windows-1252",

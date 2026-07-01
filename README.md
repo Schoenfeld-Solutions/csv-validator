@@ -15,8 +15,8 @@ implemented DATEV CSV structural contract:
 
 - CSV lexing with semicolon delimiter, double quote text qualifier, closed
   quotes, doubled quotes, and conservative control-character checks.
-- Encoding detection with UTF-8 BOM as `utf-8-sig`; files without a BOM are
-  processed deterministically as `windows-1252`.
+- Encoding detection with UTF-8 BOM as `utf-8-sig`, valid UTF-8 without a BOM
+  as `utf-8`, and deterministic `windows-1252` fallback for non-UTF-8 files.
 - DATEV header checks with marker `EXTF`, a narrow `DTVF` exception for
   `datev-debitor-kreditor-v5`, header version `700`, category, format name,
   and format version.

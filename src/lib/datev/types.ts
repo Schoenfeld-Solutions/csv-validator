@@ -1,7 +1,7 @@
 export type DatevMarker = "EXTF" | "DTVF";
 export type DatevLiteStatus = "valid" | "invalid" | "unsupported";
 export type DiagnosticSeverity = "error" | "warning";
-export type CsvEncoding = "utf-8-sig" | "windows-1252" | "unknown";
+export type CsvEncoding = "utf-8-sig" | "utf-8" | "windows-1252" | "unknown";
 export type DatevFormatType = "Text" | "Konto" | "Zahl" | "Betrag" | "Datum";
 
 export type DatevRecognitionCode =
