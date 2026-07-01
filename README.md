@@ -1,40 +1,39 @@
 # DATEV CSV Validator
 
-DATEV CSV Validator ist ein leichtgewichtiges, statisches GitHub-Pages-Tool zur
-lokalen Strukturpruefung von DATEV-CSV-Dateien. Dateien werden nur im Browser
-verarbeitet. Es gibt keinen Server-Upload, keine Telemetrie, keine Analytics
-und kein Tracking.
+DATEV CSV Validator is a lightweight static GitHub Pages tool for local
+structural validation of DATEV CSV files. Files are processed only in the
+browser. There is no server upload, telemetry, analytics, or tracking.
 
-Das Projekt ist ein unabhaengiges Open-Source-Tool. Es ist nicht mit DATEV eG
-verbunden, nicht von DATEV eG autorisiert und ersetzt keine DATEV-
-Produktdokumentation, keine steuerliche Beratung und keine Pruefung durch
-offizielle DATEV-Werkzeuge.
+This project is an independent open-source tool. It is not affiliated with or
+authorized by DATEV eG, and it does not replace DATEV product documentation,
+tax advice, accounting advice, or checks with official DATEV tools.
 
-## Funktionsumfang
+## Scope
 
-Der MVP prueft lokale `.csv`- und `.txt`-Dateien gegen einen versionierten,
-lokal implementierten DATEV-CSV-Strukturvertrag:
+The MVP validates local `.csv` and `.txt` files against a versioned, locally
+implemented DATEV CSV structural contract:
 
-- CSV-Lexik mit Semikolon, doppeltem Texttrenner, korrekt geschlossenen Quotes,
-  gedoppelten Quotes und konservativer Steuerzeichenpruefung.
-- Encoding-Erkennung mit UTF-8-BOM als `utf-8-sig`; Dateien ohne BOM werden
-  deterministisch als `windows-1252` verarbeitet.
-- DATEV-Header mit Marker `EXTF`, enger `DTVF`-Ausnahme fuer
-  `datev-debitor-kreditor-v5`, Header-Version `700`, Formatkategorie,
-  Formatname und Formatversion.
-- Caption-Zeile mit Feldanzahl und Feldreihenfolge gemaess lokalem Contract.
-- Datenzeilen mit Feldanzahl, Pflichtfeldern, Typen `Text`, `Konto`, `Zahl`,
-  `Betrag`, `Datum`, maximaler Laenge, Dezimalstellen sowie `TTMM`- und
-  `TTMMJJJJ`-Datumsgrenzen.
-- Ergebnisexport als JSON nur nach expliziter Nutzeraktion.
+- CSV lexing with semicolon delimiter, double quote text qualifier, closed
+  quotes, doubled quotes, and conservative control-character checks.
+- Encoding detection with UTF-8 BOM as `utf-8-sig`; files without a BOM are
+  processed deterministically as `windows-1252`.
+- DATEV header checks with marker `EXTF`, a narrow `DTVF` exception for
+  `datev-debitor-kreditor-v5`, header version `700`, category, format name,
+  and format version.
+- Caption row checks for field count and field order according to the local
+  contract.
+- Data row checks for field count, required fields, types `Text`, `Konto`,
+  `Zahl`, `Betrag`, `Datum`, maximum length, decimal places, and `TTMM` and
+  `TTMMJJJJ` date bounds.
+- JSON result export only after explicit user action.
 
-Die Meldung `valid` bedeutet nur:
+The status `valid` means only:
 
 > Valid against the implemented local structural DATEV CSV contract.
 
-Sie bedeutet nicht, dass eine DATEV-Anwendung die Datei akzeptiert.
+It does not mean that a DATEV application will accept the file.
 
-## Unterstuetzte Recognition-Codes
+## Supported Recognition Codes
 
 - `datev-booking-batch-v13`
 - `datev-booking-batch-v12`
@@ -49,22 +48,22 @@ Sie bedeutet nicht, dass eine DATEV-Anwendung die Datei akzeptiert.
 - `datev-natural-stack-v2`
 - `datev-text-key-v2`
 
-## Nicht im Scope
+## Out Of Scope
 
-Nicht implementiert sind Server-Uploads, Speicherung, Account- oder Login-
-Funktionen, offizielle DATEV-Blackbox-Laeufe, DATEV-Pruefprogramm-Automation,
-generische CalculationRule-Engines, AdditionalValidationRules, Cross-Record-
-oder Cross-Field-Buchungslogik, Business-Central-Importe und Garantien, dass
-offizielle DATEV-Werkzeuge dieselbe Entscheidung treffen.
+The MVP does not implement server uploads, storage, account or login features,
+official DATEV tool execution, DATEV check-program automation, generic
+CalculationRule engines, AdditionalValidationRules, cross-record or
+cross-field booking logic, Business Central imports, or guarantees that
+official DATEV tools will make the same decision.
 
-## Entwicklung
+## Development
 
-Voraussetzungen:
+Requirements:
 
-- Node.js `25.6.1` oder kompatibel mit `>=25`
+- Node.js `25.6.1` or compatible with `>=25`
 - npm
 
-Lokale Befehle:
+Local commands:
 
 ```bash
 npm ci
@@ -72,42 +71,41 @@ npm run dev -- --host 127.0.0.1 --port 4321
 npm run preflight
 ```
 
-Lokale Seiten:
+Local pages:
 
-- `http://127.0.0.1:4321/csv-validator/` automatische Spracherkennung und Redirect
-- `http://127.0.0.1:4321/csv-validator/de/` deutscher Validator
-- `http://127.0.0.1:4321/csv-validator/en/` englischer Validator
+- `http://127.0.0.1:4321/csv-validator/` automatic language detection and redirect
+- `http://127.0.0.1:4321/csv-validator/de/` German validator
+- `http://127.0.0.1:4321/csv-validator/en/` English validator
 
-`npm run preflight` ist der kanonische lokale Gate. Er fuehrt einen vollstaendigen
-Lockfile-Audit ab Severity `low`, Formatpruefung, Linting, Typecheck, Unit-Tests
-mit Coverage, Produktionsbuild, Playwright-Smoke-Test und Lighthouse-Gate aus.
+`npm run preflight` is the canonical local gate. It runs the full lockfile
+audit at severity `low`, formatting checks, linting, type checks, unit tests
+with coverage, production build, Playwright smoke test, and Lighthouse gate.
 
 ## Deployment
 
-GitHub Pages veroeffentlicht die statische Astro-Seite unter:
+GitHub Pages publishes the static Astro site at:
 
 `https://schoenfeld-solutions.github.io/csv-validator/`
 
-Die Root-Seite erkennt die bevorzugte Browser-Sprache clientseitig und leitet
-nach `/de/` oder `/en/` weiter. Nicht-deutsche Browser-Sprachen fallen auf
-Englisch zurueck. Die Seite ist fuer einen statischen Build konfiguriert. Es
-gibt keine API und keine serverseitige Verarbeitung von DATEV-Dateien.
+The root page detects the preferred browser language client-side and redirects
+to `/de/` or `/en/`. Non-German browser languages fall back to English. The
+site is configured for a static build. There is no API and no server-side
+processing of DATEV files.
 
-## Datenschutz und Sicherheit
+## Privacy And Security
 
-- Dateien bleiben im Browser.
-- Es findet kein Upload statt.
-- Ergebnisse bleiben lokal im Browser, bis Nutzer sie kopieren oder als JSON
-  herunterladen.
-- Dateiinhalte werden nicht als Rohdaten in der UI angezeigt.
-- Dateinamen werden nur als Browser-`file.name` angezeigt, nie als lokaler Pfad.
-- Die UI nutzt keine `innerHTML`-Einbindung fuer DATEV-Dateiinhalte.
-- Telemetrie, Analytics und Tracking sind nicht vorhanden.
+- Files remain in the browser.
+- No upload takes place.
+- Results remain local in the browser until users copy them or download JSON.
+- File contents are not displayed as raw data in the UI by default.
+- File names are shown only as browser `file.name`, never as local paths.
+- The UI does not render DATEV file contents through `innerHTML`.
+- Telemetry, analytics, and tracking are not present.
 
-## Lizenz und Haftungsausschluss
+## License And Disclaimer
 
-Der Code steht unter Apache License 2.0. Siehe [LICENSE](LICENSE) und
+The code is licensed under the Apache License 2.0. See [LICENSE](LICENSE) and
 [NOTICE.md](NOTICE.md).
 
-Dieses Tool wird ohne Gewaehrleistung bereitgestellt. Nutzung erfolgt auf
-eigenes Risiko und ausschliesslich als lokale, strukturelle Vorpruefung.
+This tool is provided without warranty. Use it at your own risk and only as a
+local structural pre-check.

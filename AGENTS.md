@@ -1,80 +1,81 @@
 # Repository Working Rules
 
-## Scope und Reihenfolge
+## Scope And Precedence
 
-- Diese Regeln gelten fuer das gesamte Repository.
-- Falls spaeter tiefere `AGENTS.md`- oder `AGENTS.override.md`-Dateien
-  entstehen, gelten die naechstgelegenen Regeln fuer ihren Teilbaum.
-- Dieses Repository ist ein oeffentliches GitHub-Pages-Tool. Aenderungen sollen
-  klein, pruefbar und ohne Server- oder Upload-Annahmen bleiben.
+- These rules apply to the entire repository.
+- If nested `AGENTS.md` or `AGENTS.override.md` files are added later, the
+  closest rules apply to their subtree.
+- This repository is a public GitHub Pages tool. Changes should stay small,
+  verifiable, and free of server or upload assumptions.
 
-## Projektkarte
+## Project Map
 
-- `README.md`: Produktziel, Scope, Datenschutz- und Entwicklungsbaseline.
-- `docs/contracts/`: oeffentliche Result- und Validator-Contracts.
-- `docs/ops/`: Maintainer-, Release- und Governance-Runbooks.
-- `src/lib/datev/`: DATEV-CSV-Lexing, Encoding, Contracts und Validierung.
-- `src/components/`, `src/scripts/`, `src/workers/`: UI, Browser-Interaktion
-  und Worker-Grenze.
-- `tests/unit/` und `tests/e2e/`: Verhaltenstests fuer Core und Browser-Flow.
-- `.github/`: CI, Pages, Dependabot und PR-Konventionen.
-- `.local/`: ausschliesslich lokale, ignorierte Artefakte wie DATEV-
-  Musterdateien, Reports und einmalige Test-Runner.
-- `docs/plans/`: ausschliesslich lokale, ignorierte Planungsartefakte fuer
-  kommende Slices; diese Dateien werden nicht remote versioniert.
+- `README.md`: product goal, scope, privacy baseline, and development baseline.
+- `docs/contracts/`: public result and validator contracts.
+- `docs/ops/`: maintainer, release, and governance runbooks.
+- `src/lib/datev/`: DATEV CSV lexing, encoding, contracts, and validation.
+- `src/components/`, `src/scripts/`, `src/workers/`: UI, browser interaction,
+  and the worker boundary.
+- `tests/unit/` and `tests/e2e/`: behavior tests for core logic and browser
+  flows.
+- `.github/`: CI, Pages deployment, Dependabot, and PR conventions.
+- `.local/`: ignored local-only artifacts such as DATEV sample files, reports,
+  and one-off test runners.
+- `docs/plans/`: ignored local-only planning artifacts for upcoming slices;
+  these files are not versioned remotely.
 
-## Setup und Checks
+## Setup And Checks
 
-- Node.js `25.6.1` ist die validierte Baseline; `package.json` erlaubt
-  kompatible Node-25+-Versionen.
-- Installation: `npm ci`.
-- Schneller Arbeitscheck nach kleinen Doku-/Tooling-Aenderungen:
+- Node.js `25.6.1` is the validated baseline; `package.json` allows compatible
+  Node 25+ versions.
+- Install dependencies with `npm ci`.
+- Fast check after small documentation or tooling changes:
   `npm run check:governance`, `npm run format:check`, `git diff --check`.
-- Kanonischer Gate vor Commit, Push oder PR-Update: `npm run preflight`.
-- Browser-E2E-Tests laufen standardmaessig headless. Headful Playwright ist nur
-  fuer bewusst beobachtete lokale Diagnose- oder Musterdatei-Laeufe gedacht.
+- Canonical gate before commit, push, or PR update: `npm run preflight`.
+- Browser E2E tests run headless by default. Headful Playwright is reserved for
+  intentional local diagnostics or sample-file runs that should be observed.
 
-## Git und Pull Requests
+## Git And Pull Requests
 
-- `main` ist geschuetzt und wird nicht direkt beschrieben.
-- Normale Arbeit laeuft ueber kurze `dev/<topic>`-Branches und Pull Requests.
-- Commits und PR-Titel folgen Conventional Commits:
-  `<type>(<scope>): <description>` oder `<type>: <description>`.
-- Human-Merge-Grenze: Der Agent darf Branches, Commits und Draft-PRs
-  vorbereiten. Review, Ready-Status und Squash-Merge sind menschliche
-  Maintainer-Entscheidungen.
-- Nach einem Merge wird der Remote-Branch geloescht, `main` lokal per
-  Fast-Forward aktualisiert und der Feature-Branch lokal entfernt.
+- `main` is protected and must not be pushed to directly.
+- Normal work uses short-lived `dev/<topic>` branches and pull requests.
+- Commits and PR titles follow Conventional Commits:
+  `<type>(<scope>): <description>` or `<type>: <description>`.
+- Human Merge boundary: the agent may prepare branches, commits, and draft PRs.
+  Review, ready status, and squash merge are maintainer decisions unless the
+  maintainer explicitly approves merge handling for the current task.
+- After a merge, delete the remote feature branch, fast-forward local `main`,
+  and remove the local feature branch.
 
-## Sicherheit und Datenschutz
+## Security And Privacy
 
-- Keine Server-API, keine Upload-Funktion, keine Telemetrie, keine Analytics,
-  kein Tracking und keine externen Fonts einfuehren.
-- DATEV-Dateiinhalte sind untrusted input. Keine Rohdaten per `innerHTML`
-  rendern und keine lokalen absoluten Pfade anzeigen.
-- Keine offiziellen DATEV-ZIPs, XMLs, HTML-Berichte, Screenshots, EXEs,
-  Musterdateien, dekompilierten Inhalte, raw Rule-Strings oder Markenassets
-  committen.
-- Neue Production-Dependencies brauchen eine begruendete Entscheidung und
-  ausdrueckliche Zustimmung.
-- GitHub-Actions-Permissions bleiben least-privilege; keine
-  secret-abhaengigen PR-Gates ohne dokumentierten Sicherheitsgrund.
+- Do not add a server API, upload feature, telemetry, analytics, tracking, or
+  external fonts.
+- DATEV file contents are untrusted input. Do not render raw values through
+  `innerHTML`, and do not display local absolute paths.
+- Do not commit official DATEV ZIPs, XMLs, HTML reports, screenshots, EXEs,
+  sample files, decompiled content, raw rule strings, or brand assets.
+- New production dependencies need a documented reason and explicit approval.
+- GitHub Actions permissions remain least-privilege; avoid secret-dependent PR
+  gates unless there is a documented security reason.
 
-## Architekturgrenzen
+## Architecture Boundaries
 
-- Domainlogik bleibt in `src/lib/datev/` und ist framework-unabhaengig testbar.
-- UI und DOM-Zugriffe bleiben in Astro-Komponenten und `src/scripts/`.
-- Datei-Lesen und Validierung laufen ueber den Web Worker, damit die UI bei
-  groesseren Dateien reaktionsfaehig bleibt.
-- Keine monolithischen Feature-Slices: Contract-, Core-, UI-, Tooling- und
-  Doku-Aenderungen nur gemeinsam, wenn sie fuer ein pruefbares Ziel noetig sind.
+- Domain logic stays in `src/lib/datev/` and remains framework-independent and
+  testable.
+- UI and DOM access stay in Astro components and `src/scripts/`.
+- File reading and validation run through the Web Worker so the UI remains
+  responsive for larger files.
+- Avoid monolithic feature slices. Contract, core, UI, tooling, and
+  documentation changes should only be combined when they are necessary for one
+  verifiable goal.
 
-## Artefakte
+## Artifacts
 
-- `dist/`, `.astro/`, `coverage/`, Playwright-Reports, Test-Results, Logs,
-  `.env*`, `.local/` und `docs/plans/` bleiben ungetrackt.
-- Lokale DATEV-Musterlaeufe duerfen Metadaten, Hashes, Status und
-  Diagnostic-Codes berichten, aber keine CSV-Rohdaten in Git aufnehmen.
-- Lokale Plandokumente unter `docs/plans/` duerfen Ziele, Scope und
-  Deliverables beschreiben, aber keine offiziellen DATEV-Rohartefakte,
-  lokalen absoluten Pfade oder vertraulichen Daten enthalten.
+- `dist/`, `.astro/`, `coverage/`, Playwright reports, test results, logs,
+  `.env*`, `.local/`, and `docs/plans/` stay untracked.
+- Local DATEV sample runs may report metadata, hashes, statuses, and diagnostic
+  codes, but must not place CSV raw data in Git.
+- Local planning documents under `docs/plans/` may describe goals, scope, and
+  deliverables, but must not contain official DATEV raw artifacts, local
+  absolute paths, or confidential data.

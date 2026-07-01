@@ -201,7 +201,7 @@ const validateDocumentation = async () => {
   for (const snippet of [
     "main",
     "dev/<topic>",
-    "Human-Merge",
+    "Human Merge",
     ".local/",
     "DATEV",
     "src/lib/datev/",
@@ -215,7 +215,7 @@ const validateDocumentation = async () => {
     "Protect main",
     "validate-pr-title",
     "Preflight",
-    "keine bypass actors",
+    "no bypass actors",
     "required_approving_review_count: 0",
   ]) {
     requireSnippet("docs/ops/repository-governance.md", governance, snippet);
@@ -226,10 +226,49 @@ const validateDocumentation = async () => {
     "npm run preflight",
     "git diff --check",
     "git ls-files .local",
-    "Squash-Merge",
-    "Fast-Forward",
+    "squash merge",
+    "fast-forward",
   ]) {
     requireSnippet("docs/ops/release-readiness.md", release, snippet);
+  }
+};
+
+const validateMarkdownLanguage = async () => {
+  const { stdout } = await execFileAsync("git", ["ls-files", "*.md"], {
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  const trackedMarkdownFiles = stdout
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((path) => !path.startsWith("docs/plans/"));
+
+  const forbiddenMarkdownPatterns = [
+    {
+      pattern:
+        /\b(und|oder|fuer|keine|muss|muessen|Datenschutz|Impressum|Haftung)\b/i,
+      reason: "German repository prose",
+    },
+    {
+      pattern: /\bblackbox\b/i,
+      reason: "unclear legacy validation terminology",
+    },
+    {
+      pattern: /\/Users\/Gabriel\/Repositories\/Normec/i,
+      reason: "local partner repository path",
+    },
+    {
+      pattern: /com\.datev\.validator/i,
+      reason: "internal partner repository name",
+    },
+  ];
+
+  for (const path of trackedMarkdownFiles) {
+    const text = await readText(path);
+    for (const { pattern, reason } of forbiddenMarkdownPatterns) {
+      if (pattern.test(text)) {
+        errors.push(`${path} contains ${reason}`);
+      }
+    }
   }
 };
 
@@ -284,6 +323,7 @@ await validateIgnores();
 await validatePackageScripts();
 await validatePreflight();
 await validateDocumentation();
+await validateMarkdownLanguage();
 await validateTrackedFiles();
 
 if (errors.length > 0) {
