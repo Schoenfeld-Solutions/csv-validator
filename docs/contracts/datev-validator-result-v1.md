@@ -22,7 +22,7 @@ type DatevValidatorResult = {
     dataKind: string;
   };
   csv: {
-    encoding: "utf-8-sig" | "windows-1252" | "unknown";
+    encoding: "utf-8-sig" | "utf-8" | "windows-1252" | "unknown";
     delimiter: ";";
     quote: '"';
     physicalLineCount: number;

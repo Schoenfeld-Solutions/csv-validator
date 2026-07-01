@@ -1,4 +1,4 @@
-// Generated from the read-only com.datev.validator light contract CSV files.
+// Generated from local structural DATEV CSV contract facts.
 // Normalized structure facts only: no DATEV raw XML, ZIP, EXE, report, UI message, or raw rule strings.
 
 import type { DatevLiteContract } from "./types";

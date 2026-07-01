@@ -109,3 +109,20 @@ export const naturalStackRow = (
   }
   return csvLine(fields);
 };
+
+export const paymentTermsHeaderLine = (): string =>
+  headerFor("46", "Zahlungsbedingungen", "2");
+
+export const paymentTermsRow = (
+  overrides: Partial<Record<number, string>> = {}
+): string => {
+  const fields = getFields("datev-payment-terms-v2").map(() => "");
+  fields[0] = "1";
+  for (const [index, value] of Object.entries(overrides) as [
+    string,
+    string,
+  ][]) {
+    fields[Number(index)] = value;
+  }
+  return csvLine(fields);
+};
