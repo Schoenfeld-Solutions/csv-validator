@@ -44,8 +44,18 @@ Maintainer den Ready-Status und Squash-Merge bewusst ausloest.
 - keine Verwendung von `pull_request_target`,
 - low-noise Dependabot fuer npm und GitHub Actions,
 - `.local/` ist in Git- und Tooling-Ignores enthalten und nicht getrackt,
+- `docs/plans/` ist in Git- und Tooling-Ignores enthalten und nicht getrackt,
 - keine getrackten lokalen DATEV-Muster- oder Binaerartefakte,
 - vorhandene Maintainer-Dokumentation und PR-Template.
+
+## Lokale Plandokumente
+
+`docs/plans/` ist ein bewusst lokaler Arbeitsbereich fuer ausformulierte
+Implementierungsplaene. Diese Dateien sind nicht Teil des oeffentlichen
+Repository-Contracts und duerfen nicht gestaged, committed oder gepusht werden.
+Wenn aus einem lokalen Plan verbindliche Projektregeln entstehen, muessen die
+entsprechenden Regeln in versionierte Dokumentation oder Tests ueberfuehrt
+werden.
 
 Remote-GitHub-Rulesets werden aus CI nicht veraendert. Die Remote-Verifikation
 bleibt ein Maintainer-Check ueber `gh ruleset view`.

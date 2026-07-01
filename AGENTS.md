@@ -20,6 +20,8 @@
 - `.github/`: CI, Pages, Dependabot und PR-Konventionen.
 - `.local/`: ausschliesslich lokale, ignorierte Artefakte wie DATEV-
   Musterdateien, Reports und einmalige Test-Runner.
+- `docs/plans/`: ausschliesslich lokale, ignorierte Planungsartefakte fuer
+  kommende Slices; diese Dateien werden nicht remote versioniert.
 
 ## Setup und Checks
 
@@ -70,6 +72,9 @@
 ## Artefakte
 
 - `dist/`, `.astro/`, `coverage/`, Playwright-Reports, Test-Results, Logs,
-  `.env*` und `.local/` bleiben ungetrackt.
+  `.env*`, `.local/` und `docs/plans/` bleiben ungetrackt.
 - Lokale DATEV-Musterlaeufe duerfen Metadaten, Hashes, Status und
   Diagnostic-Codes berichten, aber keine CSV-Rohdaten in Git aufnehmen.
+- Lokale Plandokumente unter `docs/plans/` duerfen Ziele, Scope und
+  Deliverables beschreiben, aber keine offiziellen DATEV-Rohartefakte,
+  lokalen absoluten Pfade oder vertraulichen Daten enthalten.
