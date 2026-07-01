@@ -1,38 +1,36 @@
-# Hinweise zu Attribution, Lizenz und Unabhaengigkeit
+# Attribution, License, And Independence Notice
 
-Dieses Repository wird von Schoenfeld Solutions gepflegt und stellt ein
-unabhaengiges, clientseitiges Open-Source-Tool zur lokalen Strukturpruefung von
-DATEV-CSV-Dateien bereit.
+This repository is maintained by Schoenfeld Solutions and provides an
+independent client-side open-source tool for local structural validation of
+DATEV CSV files.
 
-## Unabhaengigkeit
+## Independence
 
-DATEV wird in diesem Projekt nur beschreibend verwendet. Dieses Tool ist nicht
-mit DATEV eG verbunden, nicht von DATEV eG autorisiert und verwendet keine
-DATEV-Logos, Markenassets, Screenshots, EXEs, ZIPs, HTML-Berichte,
-dekompilierten Inhalte oder offiziellen Rohartefakte.
+DATEV is used descriptively in this project. This tool is not affiliated with
+DATEV eG, is not authorized by DATEV eG, and does not use DATEV logos, brand
+assets, screenshots, EXEs, ZIPs, HTML reports, decompiled content, or official
+raw artifacts.
 
-## Contract-Herkunft
+## Contract Origin
 
-Der lokale Struktur-Contract wurde aus dem read-only Referenzrepository
-`/Users/Gabriel/Repositories/Normec/com.datev.validator` abgeleitet. In dieses
-Repository werden nur normalisierte Struktur-Fakten uebernommen: Recognition-
-Codes, Header-/Caption-Grenzen, Feldnamen, Feldreihenfolge, Feldtypen,
-Pflichtstatus, Laengen, Dezimalstellen und die kleinen Date-Ausdruecke `TTMM`
-und `TTMMJJJJ`.
+The local structural contract is a project-owned derived contract. This
+repository only contains normalized structural facts needed by the browser
+validator: recognition codes, header and caption boundaries, field names, field
+order, field types, required status, lengths, decimal places, and the small
+date expressions `TTMM` and `TTMMJJJJ`.
 
-Nicht uebernommen werden offizielle DATEV-ZIPs, XMLs, HTML-Berichte,
-Screenshots, EXEs, dekompilierte Inhalte, Logos, Markenassets, raw Rule-
-Strings oder DATEV-UI-Meldungstexte.
+The repository does not include official DATEV ZIPs, XMLs, HTML reports,
+screenshots, EXEs, decompiled content, logos, brand assets, raw rule strings,
+or DATEV UI message text.
 
-## Lizenz
+## License
 
-Der Projektcode steht unter der Apache License 2.0. Der Lizenztext in
-[LICENSE](LICENSE) ist verbindlich.
+The project code is licensed under the Apache License 2.0. The license text in
+[LICENSE](LICENSE) is authoritative.
 
-## Haftungsausschluss
+## Disclaimer
 
-Das Tool wird ohne Gewaehrleistung bereitgestellt. Ein erfolgreiches Ergebnis
-bedeutet ausschliesslich, dass die Datei gegen den implementierten lokalen
-DATEV-CSV-Strukturvertrag gueltig ist. Daraus folgt keine Garantie fuer die
-Akzeptanz in DATEV-Produkten oder fuer fachliche, steuerliche oder
-buchhalterische Richtigkeit.
+The tool is provided without warranty. A successful result means only that the
+file is valid against the implemented local DATEV CSV structural contract. It
+does not guarantee acceptance by DATEV products or subject-matter, tax, or
+accounting correctness.

@@ -1,8 +1,8 @@
 # DATEV Validator Result Schema v1
 
-Das Browser-Tool erzeugt ein stabiles JSON-Ergebnis mit `schemaVersion: 1`.
-Der Report enthaelt nur Metadaten, Status und Diagnostics. Rohwerte aus der
-DATEV-Datei werden standardmaessig nicht ausgegeben.
+The browser tool creates a stable JSON result with `schemaVersion: 1`. The
+report contains only metadata, status, and diagnostics. Raw values from the
+DATEV file are not emitted by default.
 
 ```ts
 type DatevValidatorResult = {
@@ -45,6 +45,5 @@ type DatevValidatorResult = {
 };
 ```
 
-`valid` bedeutet nur: gueltig gegen den implementierten lokalen DATEV-CSV-
-Strukturvertrag. Es ist keine Zusage, dass DATEV-Produkte die Datei
-akzeptieren.
+`valid` means only: valid against the implemented local DATEV CSV structural
+contract. It is not a promise that DATEV products will accept the file.

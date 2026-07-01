@@ -1,39 +1,38 @@
 # Contributing
 
-Dieses Projekt soll klein, auditierbar und statisch deploybar bleiben.
+This project should remain small, auditable, and statically deployable.
 
-## Entwicklungsbaseline
+## Development Baseline
 
-- Node.js `25.6.1` oder kompatibel mit `>=25`.
-- npm ist der Package Manager.
-- TypeScript bleibt strict.
-- Runtime-Code bleibt framework-arm: Astro fuer die statische Seite, Vanilla
-  TypeScript fuer Interaktion und Web Worker fuer Datei-Parsing.
+- Node.js `25.6.1` or compatible with `>=25`.
+- npm is the package manager.
+- TypeScript stays strict.
+- Runtime code stays framework-light: Astro for the static site, vanilla
+  TypeScript for browser interaction, and a Web Worker for file parsing.
 
 ```bash
 npm ci
 npm run preflight
 ```
 
-## Grenzen
+## Boundaries
 
-- Keine Server-API und keine Upload-Funktion.
-- Keine Analytics, Telemetrie oder externen Fonts.
-- Keine DATEV-Logos, Markenassets, offiziellen ZIPs, XMLs, Screenshots,
-  EXEs, HTML-Berichte, dekompilierten Inhalte oder raw Rule-Strings.
-- Keine React-, Vue-, Svelte-, Tailwind- oder UI-Bibliotheks-Abhaengigkeit im
+- No server API and no upload feature.
+- No analytics, telemetry, or external fonts.
+- No DATEV logos, brand assets, official ZIPs, XMLs, screenshots, EXEs, HTML
+  reports, decompiled content, or raw rule strings.
+- No React, Vue, Svelte, Tailwind, or UI component library dependency in the
   MVP.
 
-## Commits und Pull Requests
+## Commits And Pull Requests
 
-- Conventional Commits sind verpflichtend.
-- Zulässige Form: `<type>(<scope>): <description>`.
-- Beispiele: `feat(validator): add header checks`,
+- Conventional Commits are required.
+- Valid form: `<type>(<scope>): <description>`.
+- Examples: `feat(validator): add header checks`,
   `test(worker): cover invalid quotes`, `docs(readme): document privacy`.
-- Pull Requests muessen `npm run preflight` gruen halten.
+- Pull requests must keep `npm run preflight` green.
 
-## Dokumentation
+## Documentation
 
-Oeffentliche Contract-, Datenschutz-, Sicherheits- und Deployment-Aenderungen
-muessen in README, NOTICE, SECURITY oder den Contract-Dokumenten nachgezogen
-werden.
+Public contract, privacy, security, and deployment changes must be reflected in
+README, NOTICE, SECURITY, or the contract documents.

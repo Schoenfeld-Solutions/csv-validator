@@ -1,28 +1,27 @@
 # Security Policy
 
-## Unterstuetzter Scope
+## Supported Scope
 
-Dieses Repository veroeffentlicht ein statisches, clientseitiges Tool. Die
-wichtigsten Sicherheitsziele sind:
+This repository publishes a static client-side tool. The main security goals
+are:
 
-- keine Uploads von DATEV-Dateien,
-- keine Speicherung von Dateiinhalten,
-- keine Telemetrie, Analytics oder Tracking,
-- keine Secrets oder privaten Artefakte im Repository,
-- least-privilege GitHub-Actions-Rechte.
+- no uploads of DATEV files,
+- no storage of file contents,
+- no telemetry, analytics, or tracking,
+- no secrets or private artifacts in the repository,
+- least-privilege GitHub Actions permissions.
 
-## Meldung sensibler Probleme
+## Reporting Sensitive Issues
 
-Bitte melden Sie sensible Sicherheitsprobleme privat an den Repository-Owner,
-statt ein oeffentliches Issue zu erstellen. Beschreiben Sie den betroffenen
-Pfad, Workflow oder Browser-Fall und fuegen Sie die kleinste sinnvolle
-Reproduktion hinzu.
+Please report sensitive security issues privately to the repository owner
+instead of opening a public issue. Describe the affected path, workflow, or
+browser case, and include the smallest useful reproduction.
 
-## Handling-Regeln
+## Handling Rules
 
-- Keine Credentials, Tokens, DATEV-Dateien, Rohartefakte, Logs oder lokalen
-  Exporte committen.
-- Dateinamen und Diagnostics muessen sicher gerendert werden.
-- DATEV-Dateiinhalte duerfen nicht ueber `innerHTML` in die UI gelangen.
-- Neue Production-Dependencies brauchen eine nachvollziehbare Begruendung.
-- Workflow-Permissions bleiben minimal.
+- Do not commit credentials, tokens, DATEV files, raw artifacts, logs, or local
+  exports.
+- File names and diagnostics must be rendered safely.
+- DATEV file contents must not enter the UI through `innerHTML`.
+- New production dependencies need a traceable justification.
+- Workflow permissions stay minimal.
