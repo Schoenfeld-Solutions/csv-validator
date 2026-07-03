@@ -14,6 +14,7 @@ import type {
   DatevLiteRecognitionContract,
   DatevLiteValidationResult,
   DatevMarker,
+  DatevRecognitionCode,
   ParsedCsvField,
 } from "./types";
 
@@ -29,6 +30,29 @@ const HEADER_FISCAL_YEAR_START_INDEX = 12;
 const HEADER_ACCOUNT_LENGTH_INDEX = 13;
 const HEADER_DATE_FROM_INDEX = 14;
 const HEADER_DATE_TO_INDEX = 15;
+const PAYMENT_TERMS_PERCENT_INTEGER_DIGITS = 4;
+
+type NumericRuntimeRule = "paymentTermsPercent" | "nonNegativeAmount";
+
+const PAYMENT_TERMS_PERCENT_FIELDS = new Set<string>([
+  "datev-payment-terms-v2:4",
+  "datev-payment-terms-v2:6",
+]);
+
+const NON_NEGATIVE_AMOUNT_FIELDS = new Set<string>([
+  "datev-booking-batch-v13:5",
+  "datev-booking-batch-v13:13",
+  "datev-booking-batch-v12:5",
+  "datev-booking-batch-v12:13",
+  "datev-booking-batch-v11:5",
+  "datev-booking-batch-v11:13",
+  "datev-booking-batch-v10:5",
+  "datev-booking-batch-v10:13",
+  "datev-recurring-bookings-v4:6",
+  "datev-recurring-bookings-v4:19",
+  "datev-recurring-bookings-v3:6",
+  "datev-recurring-bookings-v3:19",
+]);
 
 export interface ValidateDatevContentInput {
   readonly sourceName: string;
@@ -108,7 +132,15 @@ export const validateDatevContent = ({
         continue;
       }
       dataRecordCount += 1;
-      diagnostics.push(...validateDataRow(row, fields, rules, line));
+      diagnostics.push(
+        ...validateDataRow(
+          row,
+          fields,
+          rules,
+          recognition.recognitionCode,
+          line
+        )
+      );
     }
   } else if (header && parsed.diagnostics.length === 0) {
     const values = rows[0] ? rows[0].map((field) => field.value) : [];
@@ -551,6 +583,7 @@ const validateDataRow = (
   row: readonly ParsedCsvField[],
   fields: readonly DatevLiteFieldContract[],
   rules: readonly DatevLiteFieldRuleContract[],
+  recognitionCode: DatevRecognitionCode,
   line: number
 ): DatevLiteDiagnostic[] => {
   const diagnostics: DatevLiteDiagnostic[] = [];
@@ -571,7 +604,7 @@ const validateDataRow = (
     const rule = rules[index];
     const cell = row[index];
     if (!field || !rule || !cell) continue;
-    diagnostics.push(...validateCell(cell, field, rule, line));
+    diagnostics.push(...validateCell(cell, field, rule, recognitionCode, line));
   }
   return diagnostics;
 };
@@ -580,6 +613,7 @@ const validateCell = (
   cell: ParsedCsvField,
   field: DatevLiteFieldContract,
   rule: DatevLiteFieldRuleContract,
+  recognitionCode: DatevRecognitionCode,
   line: number
 ): DatevLiteDiagnostic[] => {
   const diagnostics: DatevLiteDiagnostic[] = [];
@@ -613,7 +647,11 @@ const validateCell = (
     );
   }
 
-  const validationMessage = validateValue(cell.value, rule);
+  const validationMessage = validateValue(
+    cell.value,
+    rule,
+    getNumericRuntimeRule(recognitionCode, field.fieldNumber)
+  );
   if (validationMessage) {
     diagnostics.push(
       diagnostic(
@@ -629,25 +667,47 @@ const validateCell = (
 
 const validateValue = (
   value: string,
-  rule: DatevLiteFieldRuleContract
+  rule: DatevLiteFieldRuleContract,
+  runtimeRule?: NumericRuntimeRule
 ): { code: string; message: string } | undefined => {
+  if (runtimeRule === "paymentTermsPercent") {
+    return validatePaymentTermsPercent(value, rule);
+  }
+
+  let validationMessage: { code: string; message: string } | undefined;
   switch (rule.formatType) {
     case "Text":
-      return value.length > rule.maxLength
-        ? {
-            code: "FIELD_TEXT_MAX_LENGTH",
-            message: `Text fields must be at most ${rule.maxLength} characters.`,
-          }
-        : undefined;
+      validationMessage =
+        value.length > rule.maxLength
+          ? {
+              code: "FIELD_TEXT_MAX_LENGTH",
+              message: `Text fields must be at most ${rule.maxLength} characters.`,
+            }
+          : undefined;
+      break;
     case "Konto":
-      return validateAccount(value, rule);
+      validationMessage = validateAccount(value, rule);
+      break;
     case "Zahl":
-      return validateDecimal(value, rule, false);
+      validationMessage = validateDecimal(value, rule, false);
+      break;
     case "Betrag":
-      return validateDecimal(value, rule, true);
+      validationMessage = validateDecimal(value, rule, true);
+      break;
     case "Datum":
-      return validateDateValue(value, rule);
+      validationMessage = validateDateValue(value, rule);
+      break;
   }
+  if (validationMessage) return validationMessage;
+
+  if (runtimeRule === "nonNegativeAmount" && value.startsWith("-")) {
+    return {
+      code: "FIELD_AMOUNT_NEGATIVE_NOT_ALLOWED",
+      message: "This amount field must not be negative.",
+    };
+  }
+
+  return undefined;
 };
 
 const validateAccount = (
@@ -728,6 +788,66 @@ const validateDecimal = (
       message: `This numeric field allows at most ${rule.decimalPlaces} decimal places.`,
     };
   }
+  return undefined;
+};
+
+const validatePaymentTermsPercent = (
+  value: string,
+  rule: DatevLiteFieldRuleContract
+): { code: string; message: string } | undefined => {
+  if (value.startsWith("-")) {
+    return {
+      code: "FIELD_NUMBER_SIGN",
+      message: "Number fields must not include a sign.",
+    };
+  }
+  if ((value.match(/,/g) ?? []).length > 1) {
+    return {
+      code: "FIELD_NUMBER_DECIMAL_COMMA",
+      message: "Numeric fields must use at most one decimal comma.",
+    };
+  }
+  const [integerPart = "", decimalPart] = value.split(",");
+  if (!/^[0-9]+$/.test(integerPart)) {
+    return {
+      code: "FIELD_NUMBER_INTEGER_DIGITS",
+      message: "Numeric fields must contain digits before the decimal comma.",
+    };
+  }
+  if (integerPart.length > PAYMENT_TERMS_PERCENT_INTEGER_DIGITS) {
+    return {
+      code: "FIELD_NUMBER_INTEGER_MAX_LENGTH",
+      message: `The integer part must be at most ${PAYMENT_TERMS_PERCENT_INTEGER_DIGITS} digits.`,
+    };
+  }
+  if (decimalPart === undefined) return undefined;
+  if (!/^[0-9]+$/.test(decimalPart)) {
+    return {
+      code: "FIELD_NUMBER_DECIMAL_DIGITS",
+      message: "Decimal places must contain only digits.",
+    };
+  }
+  if (decimalPart.length > rule.decimalPlaces) {
+    return {
+      code: "FIELD_NUMBER_DECIMAL_PLACES",
+      message: `This numeric field allows at most ${rule.decimalPlaces} decimal places.`,
+    };
+  }
+  if (/^0+$/.test(integerPart) && /^0+$/.test(decimalPart)) return undefined;
+  return {
+    code: "FIELD_PAYMENT_TERMS_PERCENT_DECIMAL_NOT_ALLOWED",
+    message:
+      "Payment terms percent fields must use unsigned whole-number notation or zero decimal-comma notation.",
+  };
+};
+
+const getNumericRuntimeRule = (
+  recognitionCode: DatevRecognitionCode,
+  fieldNumber: number
+): NumericRuntimeRule | undefined => {
+  const key = `${recognitionCode}:${fieldNumber}`;
+  if (PAYMENT_TERMS_PERCENT_FIELDS.has(key)) return "paymentTermsPercent";
+  if (NON_NEGATIVE_AMOUNT_FIELDS.has(key)) return "nonNegativeAmount";
   return undefined;
 };
 
