@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildValidationReport } from "../../src/lib/datev/report";
+import {
+  buildValidationReport,
+  reportSectionOrder,
+} from "../../src/lib/datev/report";
 import { validateDatevContent } from "../../src/lib/datev/validator";
 import {
   bookingBatchHeaderLine,
@@ -10,6 +13,7 @@ import {
   headerLine,
   validGlAccountDescriptionCsv,
 } from "./datev-test-fixtures";
+import type { DatevLiteValidationResult } from "../../src/lib/datev/types";
 
 const validate = (content: string) =>
   validateDatevContent({
@@ -25,6 +29,45 @@ const sectionById = (
 ) => report.sections.find((section) => section.id === id);
 
 describe("buildValidationReport", () => {
+  it("keeps deterministic sections and ready action for clean valid results", () => {
+    const result = {
+      csv: {
+        dataRecordCount: 1,
+        delimiter: ";",
+        encoding: "utf-8-sig",
+        fieldCount: 4,
+        physicalLineCount: 3,
+        quote: '"',
+      },
+      diagnostics: [],
+      format: {
+        category: "20",
+        dataKind: "master",
+        marker: "EXTF",
+        name: "Kontenbeschriftungen",
+        recognitionCode: "datev-gl-account-description-v3",
+        version: "3",
+      },
+      schemaVersion: 1,
+      source: {
+        name: "clean.csv",
+        processedInBrowser: true,
+        sizeBytes: 128,
+      },
+      status: "valid",
+      summary: {
+        errorCount: 0,
+        warningCount: 0,
+      },
+    } satisfies DatevLiteValidationResult;
+    const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z");
+
+    expect(report.recommendedActions).toEqual(["ready"]);
+    expect(report.sections.map((section) => section.id)).toEqual(
+      reportSectionOrder
+    );
+  });
+
   it("builds a structured safe report from a valid result with warnings", () => {
     const result = validate(validGlAccountDescriptionCsv());
     const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z");
