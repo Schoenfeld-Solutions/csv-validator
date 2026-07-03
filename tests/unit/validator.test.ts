@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getFields } from "../../src/lib/datev/contracts";
+import {
+  getFields,
+  getRules,
+  SUPPORTED_FORMATS,
+} from "../../src/lib/datev/contracts";
 import { diagnostic } from "../../src/lib/datev/diagnostics";
 import { validateDatevContent } from "../../src/lib/datev/validator";
 import {
@@ -12,6 +16,8 @@ import {
   headerLine,
   naturalStackHeaderLine,
   naturalStackRow,
+  paymentTermsHeaderLine,
+  paymentTermsRow,
   recurringBookingsHeaderLine,
   recurringBookingsRow,
   validGlAccountDescriptionCsv,
@@ -39,6 +45,84 @@ describe("validateDatevContent", () => {
     );
     expect(result.csv.dataRecordCount).toBe(1);
     expect(result.summary.errorCount).toBe(0);
+  });
+
+  it("keeps contract health invariants for numeric runtime fields", () => {
+    expect(SUPPORTED_FORMATS).toHaveLength(12);
+    for (const recognition of SUPPORTED_FORMATS) {
+      expect(getFields(recognition.recognitionCode)).toHaveLength(
+        getRules(recognition.recognitionCode).length
+      );
+    }
+
+    const paymentFields = getFields("datev-payment-terms-v2");
+    const paymentRules = getRules("datev-payment-terms-v2");
+    expect(paymentFields[3]).toMatchObject({
+      caption: "Skonto 1%",
+      fieldNumber: 4,
+    });
+    expect(paymentRules[3]).toMatchObject({
+      decimalPlaces: 2,
+      fieldNumber: 4,
+      formatType: "Betrag",
+      maxLength: 2,
+    });
+    expect(paymentFields[5]).toMatchObject({
+      caption: "Skonto 2 %",
+      fieldNumber: 6,
+    });
+    expect(paymentRules[5]).toMatchObject({
+      decimalPlaces: 2,
+      fieldNumber: 6,
+      formatType: "Betrag",
+      maxLength: 2,
+    });
+
+    for (const recognitionCode of [
+      "datev-booking-batch-v13",
+      "datev-booking-batch-v12",
+      "datev-booking-batch-v11",
+      "datev-booking-batch-v10",
+    ] as const) {
+      expect(getFields(recognitionCode)[4]).toMatchObject({
+        caption: "Basis-Umsatz",
+        fieldNumber: 5,
+      });
+      expect(getRules(recognitionCode)[4]).toMatchObject({
+        fieldNumber: 5,
+        formatType: "Betrag",
+      });
+      expect(getFields(recognitionCode)[12]).toMatchObject({
+        caption: "Skonto",
+        fieldNumber: 13,
+      });
+      expect(getRules(recognitionCode)[12]).toMatchObject({
+        fieldNumber: 13,
+        formatType: "Betrag",
+      });
+    }
+
+    for (const recognitionCode of [
+      "datev-recurring-bookings-v4",
+      "datev-recurring-bookings-v3",
+    ] as const) {
+      expect(getFields(recognitionCode)[5]).toMatchObject({
+        caption: "Basis-Umsatz",
+        fieldNumber: 6,
+      });
+      expect(getRules(recognitionCode)[5]).toMatchObject({
+        fieldNumber: 6,
+        formatType: "Betrag",
+      });
+      expect(getFields(recognitionCode)[18]).toMatchObject({
+        caption: "Skonto",
+        fieldNumber: 19,
+      });
+      expect(getRules(recognitionCode)[18]).toMatchObject({
+        fieldNumber: 19,
+        formatType: "Betrag",
+      });
+    }
   });
 
   it("warns for non-empty unquoted text fields without leaking values", () => {
@@ -235,6 +319,100 @@ describe("validateDatevContent", () => {
         "FIELD_NUMBER_INTEGER_DIGITS",
         "FIELD_NUMBER_DECIMAL_PLACES",
       ])
+    );
+  });
+
+  it("accepts payment terms percent runtime notation beyond generic amount length", () => {
+    const result = validate(
+      [
+        paymentTermsHeaderLine(),
+        contractCaptionLine("datev-payment-terms-v2"),
+        paymentTermsRow({ 3: "1000", 5: "700" }),
+        paymentTermsRow({ 3: "0,00", 5: "00,00" }),
+      ].join("\r\n")
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "FIELD_NUMBER_INTEGER_MAX_LENGTH" })
+    );
+  });
+
+  it("rejects payment terms percent runtime notation fail-closed", () => {
+    const result = validate(
+      [
+        paymentTermsHeaderLine(),
+        contractCaptionLine("datev-payment-terms-v2"),
+        paymentTermsRow({ 3: "10000", 5: "1,00" }),
+        paymentTermsRow({ 3: "-1" }),
+      ].join("\r\n")
+    );
+
+    expect(result.status).toBe("invalid");
+    expect(result.diagnostics.map((item) => item.code)).toEqual(
+      expect.arrayContaining([
+        "FIELD_NUMBER_INTEGER_MAX_LENGTH",
+        "FIELD_PAYMENT_TERMS_PERCENT_DECIMAL_NOT_ALLOWED",
+        "FIELD_NUMBER_SIGN",
+      ])
+    );
+  });
+
+  it("rejects negative Skonto and Basis-Umsatz runtime amounts", () => {
+    const bookingResult = validate(
+      [
+        bookingBatchHeaderLine(),
+        contractCaptionLine("datev-booking-batch-v13"),
+        bookingBatchRow({ 4: "-1,00", 12: "-0,01" }),
+      ].join("\r\n")
+    );
+    const recurringResult = validate(
+      [
+        recurringBookingsHeaderLine(),
+        contractCaptionLine("datev-recurring-bookings-v4"),
+        recurringBookingsRow({ 5: "-1,00", 18: "-0,01" }),
+      ].join("\r\n")
+    );
+
+    expect(bookingResult.status).toBe("invalid");
+    expect(bookingResult.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "FIELD_AMOUNT_NEGATIVE_NOT_ALLOWED",
+          fieldName: "Basis-Umsatz",
+        }),
+        expect.objectContaining({
+          code: "FIELD_AMOUNT_NEGATIVE_NOT_ALLOWED",
+          fieldName: "Skonto",
+        }),
+      ])
+    );
+    expect(recurringResult.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "FIELD_AMOUNT_NEGATIVE_NOT_ALLOWED",
+          fieldName: "Basis-Umsatz",
+        }),
+        expect.objectContaining({
+          code: "FIELD_AMOUNT_NEGATIVE_NOT_ALLOWED",
+          fieldName: "Skonto",
+        }),
+      ])
+    );
+  });
+
+  it("keeps unrelated signed amount fields valid", () => {
+    const result = validate(
+      [
+        bookingBatchHeaderLine(),
+        contractCaptionLine("datev-booking-batch-v13"),
+        bookingBatchRow({ 0: "-1,00" }),
+      ].join("\r\n")
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "FIELD_AMOUNT_NEGATIVE_NOT_ALLOWED" })
     );
   });
 

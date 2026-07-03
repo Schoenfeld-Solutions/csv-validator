@@ -242,6 +242,10 @@ const validateMarkdownLanguage = async () => {
     .filter(Boolean)
     .filter((path) => !path.startsWith("docs/plans/"));
 
+  const unclearValidationTermPattern = new RegExp(
+    `\\b${["black", "box"].join("")}\\b`,
+    "i"
+  );
   const forbiddenMarkdownPatterns = [
     {
       pattern:
@@ -249,7 +253,7 @@ const validateMarkdownLanguage = async () => {
       reason: "German repository prose",
     },
     {
-      pattern: /\bblackbox\b/i,
+      pattern: unclearValidationTermPattern,
       reason: "unclear legacy validation terminology",
     },
   ];
@@ -282,6 +286,10 @@ const validateTrackedTextContent = async () => {
     ["com", "datev", "validator"].join("\\."),
     "i"
   );
+  const unclearValidationTermPattern = new RegExp(
+    `\\b${["black", "box"].join("")}\\b`,
+    "i"
+  );
   const forbiddenTextPatterns = [
     {
       pattern: /\/Users\/[^/\s"'`<>()]+\/Repositories\/[^/\s"'`<>()]+/i,
@@ -290,6 +298,10 @@ const validateTrackedTextContent = async () => {
     {
       pattern: internalRepositoryNamePattern,
       reason: "internal reference repository name",
+    },
+    {
+      pattern: unclearValidationTermPattern,
+      reason: "unclear legacy validation terminology",
     },
   ];
 

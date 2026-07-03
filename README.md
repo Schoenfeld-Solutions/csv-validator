@@ -25,6 +25,8 @@ implemented DATEV CSV structural contract:
 - Data row checks for field count, required fields, types `Text`, `Konto`,
   `Zahl`, `Betrag`, `Datum`, maximum length, decimal places, and `TTMM` and
   `TTMMJJJJ` date bounds.
+- Browser-side fail-closed rejection for files larger than the documented
+  10 MiB processing limit.
 - JSON result export only after explicit user action.
 
 The status `valid` means only:
