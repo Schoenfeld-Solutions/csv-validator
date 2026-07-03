@@ -4,6 +4,12 @@ import type {
   WorkerValidationRequest,
   WorkerValidationResponse,
 } from "../lib/datev/types";
+import {
+  buildValidationReport,
+  type DatevValidationReport,
+  type ValidationReportActionId,
+  type ValidationReportDiagnostic,
+} from "../lib/datev/report";
 import { appCopy, type Locale } from "../lib/i18n";
 
 const getElement = <T extends HTMLElement>(id: string, typeName: string): T => {
@@ -47,7 +53,25 @@ const downloadJsonButton = getElement<HTMLButtonElement>(
   "downloadJsonButton",
   "button"
 );
+const downloadHtmlReportButton = getElement<HTMLButtonElement>(
+  "downloadHtmlReportButton",
+  "button"
+);
 const copyStatus = getElement<HTMLSpanElement>("copyStatus", "span");
+const reportGeneratedAt = getElement<HTMLSpanElement>(
+  "reportGeneratedAt",
+  "span"
+);
+const reportIntro = getElement<HTMLParagraphElement>("reportIntro", "p");
+const reportFacts = getElement<HTMLDListElement>("reportFacts", "dl");
+const reportSectionsList = getElement<HTMLDivElement>(
+  "reportSectionsList",
+  "div"
+);
+const reportActionsList = getElement<HTMLUListElement>(
+  "reportActionsList",
+  "ul"
+);
 const locale: Locale = document.documentElement.lang
   .toLowerCase()
   .startsWith("de")
@@ -77,6 +101,7 @@ const worker = new Worker(
 );
 
 let latestResult: DatevLiteValidationResult | undefined;
+let latestReport: DatevValidationReport | undefined;
 
 const setText = (element: HTMLElement, value: string): void => {
   element.textContent = value;
@@ -97,8 +122,10 @@ const formatBytes = (bytes: number): string => {
 
 const validateFile = (file: File): void => {
   latestResult = undefined;
+  latestReport = undefined;
   copyJsonButton.disabled = true;
   downloadJsonButton.disabled = true;
+  downloadHtmlReportButton.disabled = true;
   copyStatus.textContent = "";
   resultPanel.hidden = true;
   statusLine.textContent =
@@ -147,12 +174,15 @@ worker.addEventListener(
 );
 
 const renderResult = (result: DatevLiteValidationResult): void => {
+  latestReport = buildValidationReport(result);
   resultPanel.hidden = false;
   copyJsonButton.disabled = false;
   downloadJsonButton.disabled = false;
+  downloadHtmlReportButton.disabled = false;
   statusLine.textContent = `${result.source.name} ${copy.processed}.`;
   renderBadge(result);
   renderMetadata(result);
+  renderValidationReport(latestReport, result);
   renderDiagnostics(result.diagnostics);
   diagnosticSummary.textContent = copy.diagnostics.summary(
     result.summary.errorCount,
@@ -193,6 +223,100 @@ const renderMetadata = (result: DatevLiteValidationResult): void => {
     metaFields,
     result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount)
   );
+};
+
+const renderValidationReport = (
+  report: DatevValidationReport,
+  result: DatevLiteValidationResult
+): void => {
+  reportGeneratedAt.textContent = `${copy.report.generatedAt}: ${formatDateTime(report.generatedAt)}`;
+  reportIntro.textContent = copy.report.intro;
+  renderReportFacts(report, result);
+  renderReportSections(report);
+  renderReportActions(report.recommendedActions);
+};
+
+const renderReportFacts = (
+  report: DatevValidationReport,
+  result: DatevLiteValidationResult
+): void => {
+  reportFacts.replaceChildren();
+  appendFact(reportFacts, copy.report.sourceAndPrivacy, result.source.name);
+  appendFact(reportFacts, copy.metadata.encoding, result.csv.encoding);
+  appendFact(
+    reportFacts,
+    copy.report.sections.contract,
+    copy.report.contractSource[report.contractSource]
+  );
+  appendFact(
+    reportFacts,
+    copy.metadata.recognition,
+    result.format?.recognitionCode ?? "-"
+  );
+};
+
+const renderReportSections = (report: DatevValidationReport): void => {
+  reportSectionsList.replaceChildren();
+  for (const section of report.sections) {
+    const item = document.createElement("section");
+    item.className = "report-section";
+
+    const heading = document.createElement("div");
+    heading.className = "report-section-heading";
+
+    const title = document.createElement("h4");
+    title.textContent = copy.report.sections[section.id];
+    const status = document.createElement("span");
+    status.className = `report-section-status is-${section.status}`;
+    status.textContent = copy.report.status[section.status];
+
+    heading.append(title, status);
+    item.append(heading);
+
+    const description = document.createElement("p");
+    description.textContent = copy.report.sectionDescriptions[section.id];
+    item.append(description);
+
+    const counts = document.createElement("p");
+    counts.className = "report-section-counts";
+    counts.textContent = copy.diagnostics.summary(
+      section.errorCount,
+      section.warningCount
+    );
+    item.append(counts);
+
+    if (section.diagnostics.length > 0) {
+      item.append(createReportDiagnosticList(section.diagnostics));
+    }
+
+    reportSectionsList.append(item);
+  }
+};
+
+const createReportDiagnosticList = (
+  diagnostics: readonly ValidationReportDiagnostic[]
+): HTMLUListElement => {
+  const list = document.createElement("ul");
+  list.className = "report-diagnostic-list";
+  for (const diagnostic of diagnostics) {
+    const item = document.createElement("li");
+    const location = formatDiagnosticLocation(diagnostic);
+    const remediation = copy.report.remediation[diagnostic.remediationCategory];
+    item.textContent = `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${location}: ${remediation}`;
+    list.append(item);
+  }
+  return list;
+};
+
+const renderReportActions = (
+  actions: readonly ValidationReportActionId[]
+): void => {
+  reportActionsList.replaceChildren();
+  for (const action of actions) {
+    const item = document.createElement("li");
+    item.textContent = copy.report.actions[action];
+    reportActionsList.append(item);
+  }
 };
 
 const renderDiagnostics = (
@@ -239,6 +363,47 @@ const appendCell = (row: HTMLTableRowElement, value: string): void => {
   row.append(cell);
 };
 
+const appendFact = (
+  list: HTMLDListElement,
+  term: string,
+  description: string
+): void => {
+  const wrapper = document.createElement("div");
+  const termElement = document.createElement("dt");
+  const descriptionElement = document.createElement("dd");
+  termElement.textContent = term;
+  descriptionElement.textContent = description;
+  wrapper.append(termElement, descriptionElement);
+  list.append(wrapper);
+};
+
+const formatDateTime = (isoValue: string): string =>
+  new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(isoValue));
+
+const formatDiagnosticLocation = (
+  diagnostic: Pick<
+    DatevLiteDiagnostic,
+    "column" | "fieldIndex" | "fieldName" | "line"
+  >
+): string => {
+  const parts = [
+    diagnostic.line === undefined
+      ? undefined
+      : `${copy.diagnostics.line} ${diagnostic.line}`,
+    diagnostic.column === undefined
+      ? undefined
+      : `${copy.diagnostics.column} ${diagnostic.column}`,
+    diagnostic.fieldName ??
+      (diagnostic.fieldIndex === undefined
+        ? undefined
+        : `${copy.diagnostics.field} ${diagnostic.fieldIndex}`),
+  ].filter(Boolean);
+  return parts.length === 0 ? "" : ` (${parts.join(", ")})`;
+};
+
 copyJsonButton.addEventListener("click", async () => {
   if (!latestResult) return;
   try {
@@ -262,3 +427,107 @@ downloadJsonButton.addEventListener("click", () => {
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(link.href), 0);
 });
+
+downloadHtmlReportButton.addEventListener("click", () => {
+  if (!latestReport || !latestResult) return;
+  const blob = new Blob([createHtmlReport(latestReport, latestResult)], {
+    type: "text/html;charset=utf-8",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${latestResult.source.name.replace(/[^a-zA-Z0-9._-]/g, "_")}.${copy.report.downloadName}.html`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 0);
+});
+
+const createHtmlReport = (
+  report: DatevValidationReport,
+  result: DatevLiteValidationResult
+): string => `<!doctype html>
+<html lang="${locale}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(copy.report.htmlTitle)}</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { color: #102033; line-height: 1.5; margin: 0; padding: 32px; }
+    main { margin: 0 auto; max-width: 980px; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 2rem; line-height: 1.1; }
+    h2 { border-bottom: 1px solid #d7e4dc; font-size: 1.1rem; margin-top: 28px; padding-bottom: 6px; }
+    .summary { color: #5b6b7d; margin-top: 8px; }
+    dl { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px 0; }
+    dl div, section { border: 1px solid #d7e4dc; border-radius: 8px; padding: 12px; }
+    dt { color: #5b6b7d; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+    dd { font-weight: 700; margin: 2px 0 0; overflow-wrap: anywhere; }
+    .section-heading { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+    .status { border: 1px solid #aec7ba; border-radius: 999px; font-size: .78rem; font-weight: 800; padding: 3px 8px; }
+    .failed { border-color: #b42318; color: #b42318; }
+    .warning { border-color: #9a5b00; color: #9a5b00; }
+    .passed { border-color: #176b5b; color: #176b5b; }
+    .not-run { color: #5b6b7d; }
+    ul { margin: 8px 0 0; padding-left: 20px; }
+    li { margin: 4px 0; }
+    footer { border-top: 1px solid #d7e4dc; color: #5b6b7d; margin-top: 32px; padding-top: 12px; }
+    @media print { body { padding: 0; } section, dl div { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>${escapeHtml(copy.report.htmlTitle)}</h1>
+    <p class="summary">${escapeHtml(resultStatement.textContent ?? "")}</p>
+    <dl>
+      ${createFactHtml(copy.report.generatedAt, formatDateTime(report.generatedAt))}
+      ${createFactHtml(copy.report.sourceAndPrivacy, result.source.name)}
+      ${createFactHtml(copy.metadata.encoding, result.csv.encoding)}
+      ${createFactHtml(copy.metadata.rows, String(result.csv.physicalLineCount))}
+      ${createFactHtml(copy.metadata.dataRows, String(result.csv.dataRecordCount))}
+      ${createFactHtml(copy.metadata.fields, result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount))}
+      ${createFactHtml(copy.report.sections.contract, copy.report.contractSource[report.contractSource])}
+      ${createFactHtml(copy.metadata.recognition, result.format?.recognitionCode ?? "-")}
+    </dl>
+    <h2>${escapeHtml(copy.report.nextActions)}</h2>
+    <ul>
+      ${report.recommendedActions
+        .map((action) => `<li>${escapeHtml(copy.report.actions[action])}</li>`)
+        .join("")}
+    </ul>
+    <h2>${escapeHtml(copy.report.sectionsLabel)}</h2>
+    ${report.sections.map(createSectionHtml).join("")}
+    <footer>
+      <p>${escapeHtml(copy.report.intro)}</p>
+      <p>${escapeHtml(copy.trust.intro)}</p>
+    </footer>
+  </main>
+</body>
+</html>
+`;
+
+const createSectionHtml = (
+  section: DatevValidationReport["sections"][number]
+): string => `<section>
+  <div class="section-heading">
+    <h3>${escapeHtml(copy.report.sections[section.id])}</h3>
+    <span class="status ${section.status}">${escapeHtml(copy.report.status[section.status])}</span>
+  </div>
+  <p>${escapeHtml(copy.report.sectionDescriptions[section.id])}</p>
+  <p>${escapeHtml(copy.diagnostics.summary(section.errorCount, section.warningCount))}</p>
+  ${section.diagnostics.length === 0 ? "" : `<ul>${section.diagnostics.map(createDiagnosticHtml).join("")}</ul>`}
+</section>`;
+
+const createDiagnosticHtml = (diagnostic: ValidationReportDiagnostic): string =>
+  `<li>${escapeHtml(diagnostic.severity.toUpperCase())} ${escapeHtml(diagnostic.code)}${escapeHtml(formatDiagnosticLocation(diagnostic))}: ${escapeHtml(copy.report.remediation[diagnostic.remediationCategory])}</li>`;
+
+const createFactHtml = (term: string, description: string): string =>
+  `<div><dt>${escapeHtml(term)}</dt><dd>${escapeHtml(description)}</dd></div>`;
+
+const escapeHtml = (value: string): string =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");

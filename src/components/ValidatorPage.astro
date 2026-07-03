@@ -124,8 +124,38 @@ const copy = appCopy[locale];
         >
           {copy.actions.download}
         </button>
+        <button
+          class="secondary-action"
+          id="downloadHtmlReportButton"
+          type="button"
+          disabled
+        >
+          {copy.actions.downloadHtml}
+        </button>
         <span id="copyStatus" class="copy-status" aria-live="polite"></span>
       </div>
+
+      <section class="report-block" aria-labelledby="reportSectionsTitle">
+        <div class="report-heading">
+          <div>
+            <p class="section-kicker">{copy.report.kicker}</p>
+            <h3 id="reportSectionsTitle">{copy.report.title}</h3>
+          </div>
+          <span id="reportGeneratedAt"></span>
+        </div>
+        <p id="reportIntro" class="report-intro"></p>
+        <dl class="report-facts" id="reportFacts"></dl>
+        <div
+          class="report-section-list"
+          id="reportSectionsList"
+          aria-label={copy.report.sectionsLabel}
+        >
+        </div>
+        <div class="report-actions-block">
+          <h3>{copy.report.nextActions}</h3>
+          <ul id="reportActionsList"></ul>
+        </div>
+      </section>
 
       <div class="diagnostics-card">
         <div class="diagnostics-heading">

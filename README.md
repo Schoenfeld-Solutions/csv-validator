@@ -27,7 +27,8 @@ implemented DATEV CSV structural contract:
   `TTMMJJJJ` date bounds.
 - Browser-side fail-closed rejection for files larger than the documented
   10 MiB processing limit.
-- JSON result export only after explicit user action.
+- Structured local report sections and JSON/HTML report export only after
+  explicit user action.
 
 The status `valid` means only:
 
@@ -99,6 +100,7 @@ processing of DATEV files.
 - Files remain in the browser.
 - No upload takes place.
 - Results remain local in the browser until users copy them or download JSON.
+- HTML reports are generated locally from metadata and diagnostics only.
 - File contents are not displayed as raw data in the UI by default.
 - File names are shown only as browser `file.name`, never as local paths.
 - The UI does not render DATEV file contents through `innerHTML`.
