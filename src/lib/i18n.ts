@@ -84,7 +84,8 @@ export const appCopy = {
     description:
       "Unabhängig, clientseitig, kein Upload, keine Gewährleistung. Gültige Ergebnisse bedeuten nur, dass die Datei dem implementierten lokalen DATEV-CSV-Strukturvertrag entspricht.",
     dropTitle: ".csv oder .txt hier ablegen",
-    dropCopy: "Maximale Größe: 10 MiB. UTF-8 mit BOM oder Windows-1252.",
+    dropCopy:
+      "Maximale Größe: 10 MiB. UTF-8 mit oder ohne BOM oder Windows-1252.",
     chooseFile: "Datei auswählen",
     waiting: "Warte auf eine lokale Datei.",
     processing: "wird lokal verarbeitet",
@@ -351,7 +352,8 @@ export const appCopy = {
     description:
       "Independent, client-side, no upload, no warranty. Valid results mean only that the file matches the implemented local structural DATEV CSV contract.",
     dropTitle: "Drop .csv or .txt here",
-    dropCopy: "Maximum size: 10 MiB. UTF-8 with BOM or Windows-1252.",
+    dropCopy:
+      "Maximum size: 10 MiB. UTF-8 with or without BOM or Windows-1252.",
     chooseFile: "Choose file",
     waiting: "Waiting for a local file.",
     processing: "is processed locally",

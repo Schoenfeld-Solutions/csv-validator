@@ -97,6 +97,11 @@ test("loads German and English validator routes with language switch", async ({
   await expect(
     page.getByRole("heading", { name: "DATEV CSV-Dateien lokal prüfen" })
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Maximale Größe: 10 MiB. UTF-8 mit oder ohne BOM oder Windows-1252."
+    )
+  ).toBeVisible();
 
   await page
     .getByRole("link", { name: "Sprache auf Englisch wechseln" })
@@ -105,6 +110,11 @@ test("loads German and English validator routes with language switch", async ({
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(
     page.getByRole("heading", { name: "Validate DATEV CSV files locally" })
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Maximum size: 10 MiB. UTF-8 with or without BOM or Windows-1252."
+    )
   ).toBeVisible();
 });
 
