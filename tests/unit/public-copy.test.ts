@@ -28,8 +28,13 @@ describe("public copy checks", () => {
   });
 
   it("rejects legacy source identifiers in tracked source", () => {
+    const legacyIdentifier = "Datev" + "Lite";
+
     expect(() =>
-      assertNoLegacySourceIdentifiers("const name = 'DatevLite';", "sample.ts")
+      assertNoLegacySourceIdentifiers(
+        `const name = '${legacyIdentifier}';`,
+        "sample.ts"
+      )
     ).toThrow(/legacy validator name/);
   });
 });
