@@ -9,7 +9,7 @@ describe("public copy checks", () => {
   it("accepts current project wording", () => {
     expect(() =>
       assertPublicCopy(
-        "DATEV CSV Validator is a browser-only structural validator.",
+        "DATEV CSV Validator is a browser-only structural validator. It does not guarantee acceptance by DATEV products.",
         "sample.md"
       )
     ).not.toThrow();
@@ -25,6 +25,19 @@ describe("public copy checks", () => {
     expect(() =>
       assertPublicCopy("DATEV CSV Validator Lite", "sample.md")
     ).toThrow(/legacy Lite naming/);
+  });
+
+  it("rejects official acceptance claims in public copy", () => {
+    for (const claim of [
+      "DATEV accepted",
+      "DATEV-approved",
+      "official DATEV validator",
+      "guaranteed DATEV acceptance",
+    ]) {
+      expect(() => assertPublicCopy(claim, "sample.md")).toThrow(
+        /official acceptance claim/
+      );
+    }
   });
 
   it("rejects legacy source identifiers in tracked source", () => {

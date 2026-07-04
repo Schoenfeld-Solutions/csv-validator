@@ -40,6 +40,13 @@ const collectPublicSourceFiles = async () =>
     await collectTrackedFiles(["*.ts", "*.tsx", "*.js", "*.mjs", "*.astro"])
   ).filter((file) => file !== "scripts/check-public-copy.mjs");
 
+const officialAcceptanceClaimPatterns = [
+  /\bDATEV accepted\b/i,
+  /\bDATEV[- ]approved\b/i,
+  /\bofficial DATEV validator\b/i,
+  /\bguaranteed DATEV acceptance\b/i,
+];
+
 export const assertPublicCopy = (text, sourceLabel) => {
   if (/\bLite\b|datev-lite/i.test(text)) {
     throw new Error(`${sourceLabel} still contains legacy Lite naming.`);
@@ -49,6 +56,9 @@ export const assertPublicCopy = (text, sourceLabel) => {
   }
   if (/\bMVP\b/.test(text)) {
     throw new Error(`${sourceLabel} contains outdated MVP wording.`);
+  }
+  if (officialAcceptanceClaimPatterns.some((pattern) => pattern.test(text))) {
+    throw new Error(`${sourceLabel} contains an official acceptance claim.`);
   }
 };
 
