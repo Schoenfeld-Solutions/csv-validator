@@ -22,6 +22,8 @@ const SUPPORTED_FIELD_TYPES = new Set<DatevFormatType>([
 const SUPPORTED_FORMAT_EXPRESSIONS = new Set(["", "TTMM", "TTMMJJJJ"]);
 const XML_SECURITY_PATTERN =
   /<!DOCTYPE|<!ENTITY|SYSTEM\s+["']|PUBLIC\s+["']|<\?/i;
+const SAFE_XML_DECLARATION_PATTERN =
+  /^\s*<\?xml\s+version\s*=\s*(["'])1\.[0-9]+\1(?:\s+encoding\s*=\s*(["'])[A-Za-z][A-Za-z0-9._-]*\2)?(?:\s+standalone\s*=\s*(["'])(?:yes|no)\3)?\s*\?>/i;
 
 export interface DatevXmlContractImportResult {
   readonly repository?: DatevContractRepository;
@@ -136,7 +138,8 @@ const parseSupportedXml = (
   readonly diagnostics: readonly DatevLiteDiagnostic[];
 } => {
   const diagnostics: DatevLiteDiagnostic[] = [];
-  if (XML_SECURITY_PATTERN.test(xml)) {
+  const xmlWithoutDeclaration = stripSafeXmlDeclaration(xml);
+  if (XML_SECURITY_PATTERN.test(xmlWithoutDeclaration)) {
     return {
       diagnostics: [
         diagnostic(
@@ -148,7 +151,7 @@ const parseSupportedXml = (
     };
   }
 
-  const parsed = parseXmlSubset(xml);
+  const parsed = parseXmlSubset(xmlWithoutDeclaration);
   if (!parsed.root) {
     return {
       diagnostics: [
@@ -230,6 +233,9 @@ const parseSupportedXml = (
       : parsed.root,
   };
 };
+
+const stripSafeXmlDeclaration = (xml: string): string =>
+  xml.replace(SAFE_XML_DECLARATION_PATTERN, "");
 
 const convertContract = (
   contract: XmlNode,

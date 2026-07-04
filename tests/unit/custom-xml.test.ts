@@ -60,6 +60,9 @@ const customGlAccountOverrideCsv = (): string =>
 const diagnosticCodes = (xml: string): readonly string[] =>
   importDatevXmlContractSet([xml]).diagnostics.map((item) => item.code);
 
+const withXmlDeclaration = (xml: string): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>${xml}`;
+
 const expectRepository = (
   repository: DatevContractRepository | undefined
 ): DatevContractRepository => {
@@ -125,6 +128,22 @@ describe("importDatevXmlContractSet", () => {
         necessary: false,
       },
     ]);
+  });
+
+  it("accepts a safe XML declaration before the contract root", () => {
+    const imported = importDatevXmlContractSet([
+      withXmlDeclaration(validCustomContractXml()),
+    ]);
+
+    expect(imported.diagnostics).toEqual([]);
+    expect(imported.repository?.summary.contractCount).toBe(1);
+    expect(
+      imported.repository?.findRecognitionBySignature(
+        "99",
+        "Synthetic Format",
+        "1"
+      )
+    ).toMatchObject({ recognitionCode: "synthetic-format-v1" });
   });
 
   it("validates CSV content against a synthetic custom contract repository", () => {
@@ -328,11 +347,12 @@ describe("importDatevXmlContractSet", () => {
     expect(diagnosticCodes(xml)).toContain("XML_CONTRACT_NODE_UNSUPPORTED");
   });
 
-  it("rejects declarations, entities, and external references before interpretation", () => {
+  it("rejects entities, external references, and processing instructions before interpretation", () => {
     for (const xml of [
-      '<?xml version="1.0"?><datev-format-contracts version="1" />',
       '<!DOCTYPE root SYSTEM "file:///tmp/example"><datev-format-contracts version="1" />',
       '<!ENTITY xxe SYSTEM "file:///tmp/example"><datev-format-contracts version="1" />',
+      '<?xml-stylesheet type="text/xsl" href="file:///tmp/example"?><datev-format-contracts version="1" />',
+      `${validCustomContractXml()}<?processing instruction?>`,
     ]) {
       expect(diagnosticCodes(xml)).toContain(
         "XML_CONTRACT_SECURITY_UNSUPPORTED"
