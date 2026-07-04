@@ -135,7 +135,8 @@ processing of DATEV files.
 - File contents are not displayed as raw data in the UI by default.
 - The optional data preview is disabled by default, stays in the browser, and
   is not included in JSON or HTML reports.
-- File names are shown only as browser `file.name`, never as local paths.
+- File names are displayed as browser-provided base names, never as local
+  paths.
 - The UI does not render DATEV file contents through `innerHTML`.
 - Telemetry, analytics, and tracking are not present.
 
