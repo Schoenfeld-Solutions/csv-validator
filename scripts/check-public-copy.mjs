@@ -35,10 +35,15 @@ const collectPublicMarkdownFiles = async () => {
   );
 };
 
-const collectPublicSourceFiles = async () =>
+const collectTrackedSourceFiles = async () =>
   (
     await collectTrackedFiles(["*.ts", "*.tsx", "*.js", "*.mjs", "*.astro"])
   ).filter((file) => file !== "scripts/check-public-copy.mjs");
+
+export const isPublicSourceFile = (file) => file.startsWith("src/");
+
+const collectPublicSourceFiles = async () =>
+  (await collectTrackedSourceFiles()).filter(isPublicSourceFile);
 
 const officialAcceptanceClaimPatterns = [
   /\bDATEV accepted\b/i,
@@ -74,12 +79,16 @@ const main = async () => {
     assertPublicCopy(await readFile(markdownFile, "utf8"), markdownFile);
   }
 
-  const sourceFiles = await collectPublicSourceFiles();
+  const publicSourceFiles = await collectPublicSourceFiles();
+  for (const sourceFile of publicSourceFiles) {
+    const sourceText = await readFile(sourceFile, "utf8");
+    assertPublicCopy(sourceText, sourceFile);
+  }
+
+  const sourceFiles = await collectTrackedSourceFiles();
   for (const sourceFile of sourceFiles) {
-    assertNoLegacySourceIdentifiers(
-      await readFile(sourceFile, "utf8"),
-      sourceFile
-    );
+    const sourceText = await readFile(sourceFile, "utf8");
+    assertNoLegacySourceIdentifiers(sourceText, sourceFile);
   }
 
   const htmlFiles = await collectHtmlFiles(distDirectory);
