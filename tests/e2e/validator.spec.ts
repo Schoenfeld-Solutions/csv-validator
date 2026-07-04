@@ -159,6 +159,47 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("body")).not.toContainText("Kasse lang");
   await expect(page.locator(".trust-icon")).toHaveCount(3);
 
+  await page.getByRole("tab", { name: "Analysis" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Data" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(page.locator("body")).not.toContainText("Kasse lang");
+
+  await page.getByRole("button", { name: "Show data preview" }).click();
+  await expect(
+    page.getByRole("columnheader", { exact: true, name: "Konto" })
+  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Kasse lang" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Analysis" }).click();
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("datev-gl-account-description-v3");
+  expect(copiedJson).not.toContain("Kasse lang");
+
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(jsonReport).not.toContain("Kasse lang");
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
@@ -169,6 +210,34 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expect(htmlReport).toContain("No upload");
   expect(htmlReport).toContain("datev-gl-account-description-v3");
   expect(htmlReport).not.toContain("Kasse lang");
+
+  await page.evaluate(
+    (content) => {
+      const dropzone = document.getElementById("dropzone");
+      if (!dropzone) throw new Error("dropzone missing");
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(
+        new File([content], "accounts-second.csv", { type: "text/csv" })
+      );
+      dropzone.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer,
+        })
+      );
+    },
+    validGlAccountDescriptionCsv().replace("Kasse lang", "Second hidden value")
+  );
+
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "datev-gl-account-description-v3"
+  );
+  await page.getByRole("tab", { name: "Data" }).click();
+  await expect(page.locator("body")).not.toContainText("Second hidden value");
+  await expect(
+    page.getByRole("button", { name: "Show data preview" })
+  ).toBeVisible();
 
   const themeToggle = page.getByRole("button", {
     name: "Toggle light and dark mode",
@@ -184,8 +253,8 @@ test("creates a structured report for unsupported local CSV files", async ({
 
   const unsupportedCsv = [
     headerLine({ 2: "999", 3: "Unsupported", 4: "1" }),
-    csvLine(["A", "B"]),
-    csvLine(["1", "2"]),
+    csvLine(["Unsupported caption", "B"]),
+    csvLine(["preview-secret", "2"]),
   ].join("\r\n");
 
   await page.evaluate((content) => {
@@ -214,7 +283,23 @@ test("creates a structured report for unsupported local CSV files", async ({
   ).toBeVisible();
   await expect(page.getByText("Unsupported checks")).toBeVisible();
   await expect(page.getByText("Not run").first()).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("preview-secret");
 
+  await page.getByRole("tab", { name: "Data" }).click();
+  await expect(page.locator("body")).not.toContainText("preview-secret");
+  await page.getByRole("button", { name: "Show data preview" }).click();
+  await expect(
+    page
+      .locator("#dataPreviewContent")
+      .getByText(
+        "No supported local contract matched this file; this is a raw parsed CSV preview only."
+      )
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "preview-secret" })
+  ).toBeVisible();
+
+  await page.getByRole("tab", { name: "Analysis" }).click();
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
@@ -224,6 +309,7 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).toContain("Unsupported");
   expect(htmlReport).toContain("No supported local contract");
   expect(htmlReport).not.toContain("EXTF;");
+  expect(htmlReport).not.toContain("preview-secret");
 });
 
 test("legal pages are available without placeholders", async ({ page }) => {

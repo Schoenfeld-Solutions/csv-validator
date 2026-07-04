@@ -107,6 +107,33 @@ export interface ParsedCsv {
   readonly diagnostics: readonly DatevLiteDiagnostic[];
 }
 
+export type DatevDataPreviewUnavailableReason =
+  "csv-lexing-failed" | "no-caption-row" | "no-data-rows";
+
+export interface DatevPreviewCell {
+  readonly value: string;
+  readonly line: number;
+  readonly column: number;
+}
+
+export interface DatevPreviewRow {
+  readonly line: number;
+  readonly fieldCount: number;
+  readonly cells: readonly DatevPreviewCell[];
+}
+
+export interface DatevDataPreview {
+  readonly available: boolean;
+  readonly reason?: DatevDataPreviewUnavailableReason;
+  readonly rowLimit: 50;
+  readonly totalDataRows: number;
+  readonly shownDataRows: number;
+  readonly truncated: boolean;
+  readonly captionLine?: number;
+  readonly captions: readonly DatevPreviewCell[];
+  readonly rows: readonly DatevPreviewRow[];
+}
+
 export interface WorkerValidationRequest {
   readonly type: "validate";
   readonly file: File;
@@ -120,4 +147,5 @@ export type WorkerValidationResponse =
   | {
       readonly type: "result";
       readonly result: DatevLiteValidationResult;
+      readonly preview?: DatevDataPreview;
     };

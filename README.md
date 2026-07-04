@@ -29,6 +29,8 @@ implemented DATEV CSV structural contract:
   10 MiB processing limit.
 - Structured local report sections and JSON/HTML report export only after
   explicit user action.
+- An optional local data preview for the first parsed rows after explicit user
+  approval. Preview values are not exported.
 
 The status `valid` means only:
 
@@ -102,6 +104,8 @@ processing of DATEV files.
 - Results remain local in the browser until users copy them or download JSON.
 - HTML reports are generated locally from metadata and diagnostics only.
 - File contents are not displayed as raw data in the UI by default.
+- The optional data preview is disabled by default, stays in the browser, and
+  is not included in JSON or HTML reports.
 - File names are shown only as browser `file.name`, never as local paths.
 - The UI does not render DATEV file contents through `innerHTML`.
 - Telemetry, analytics, and tracking are not present.

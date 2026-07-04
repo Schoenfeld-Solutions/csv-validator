@@ -1,4 +1,5 @@
 import type {
+  DatevDataPreview,
   DatevLiteDiagnostic,
   DatevLiteValidationResult,
   WorkerValidationRequest,
@@ -72,6 +73,22 @@ const reportActionsList = getElement<HTMLUListElement>(
   "reportActionsList",
   "ul"
 );
+const analysisTab = getElement<HTMLButtonElement>("analysisTab", "button");
+const dataTab = getElement<HTMLButtonElement>("dataTab", "button");
+const analysisPanel = getElement<HTMLElement>("analysisPanel", "section");
+const dataPanel = getElement<HTMLElement>("dataPanel", "section");
+const dataPreviewStatus = getElement<HTMLParagraphElement>(
+  "dataPreviewStatus",
+  "p"
+);
+const enableDataPreviewButton = getElement<HTMLButtonElement>(
+  "enableDataPreviewButton",
+  "button"
+);
+const dataPreviewContent = getElement<HTMLDivElement>(
+  "dataPreviewContent",
+  "div"
+);
 const locale: Locale = document.documentElement.lang
   .toLowerCase()
   .startsWith("de")
@@ -102,6 +119,8 @@ const worker = new Worker(
 
 let latestResult: DatevLiteValidationResult | undefined;
 let latestReport: DatevValidationReport | undefined;
+let latestPreview: DatevDataPreview | undefined;
+let isDataPreviewEnabled = false;
 
 const setText = (element: HTMLElement, value: string): void => {
   element.textContent = value;
@@ -123,10 +142,14 @@ const formatBytes = (bytes: number): string => {
 const validateFile = (file: File): void => {
   latestResult = undefined;
   latestReport = undefined;
+  latestPreview = undefined;
+  isDataPreviewEnabled = false;
   copyJsonButton.disabled = true;
   downloadJsonButton.disabled = true;
   downloadHtmlReportButton.disabled = true;
   copyStatus.textContent = "";
+  resetDataPreview();
+  selectResultTab("analysis");
   resultPanel.hidden = true;
   statusLine.textContent =
     locale === "de"
@@ -169,12 +192,17 @@ worker.addEventListener(
       return;
     }
     latestResult = message.result;
-    renderResult(message.result);
+    latestPreview = message.preview;
+    renderResult(message.result, message.preview);
   }
 );
 
-const renderResult = (result: DatevLiteValidationResult): void => {
+const renderResult = (
+  result: DatevLiteValidationResult,
+  preview: DatevDataPreview | undefined
+): void => {
   latestReport = buildValidationReport(result);
+  isDataPreviewEnabled = false;
   resultPanel.hidden = false;
   copyJsonButton.disabled = false;
   downloadJsonButton.disabled = false;
@@ -184,10 +212,162 @@ const renderResult = (result: DatevLiteValidationResult): void => {
   renderMetadata(result);
   renderValidationReport(latestReport, result);
   renderDiagnostics(result.diagnostics);
+  renderDataPreviewGate(result, preview);
   diagnosticSummary.textContent = copy.diagnostics.summary(
     result.summary.errorCount,
     result.summary.warningCount
   );
+};
+
+type ResultTab = "analysis" | "data";
+
+const selectResultTab = (tab: ResultTab): void => {
+  const entries: readonly [ResultTab, HTMLButtonElement, HTMLElement][] = [
+    ["analysis", analysisTab, analysisPanel],
+    ["data", dataTab, dataPanel],
+  ];
+  for (const [key, button, panel] of entries) {
+    const isSelected = key === tab;
+    button.classList.toggle("is-active", isSelected);
+    button.setAttribute("aria-selected", String(isSelected));
+    button.tabIndex = isSelected ? 0 : -1;
+    panel.hidden = !isSelected;
+    panel.classList.toggle("is-active", isSelected);
+  }
+};
+
+const handleTabKeydown = (event: KeyboardEvent): void => {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  const nextTab =
+    document.activeElement === analysisTab && event.key === "ArrowRight"
+      ? dataTab
+      : document.activeElement === dataTab && event.key === "ArrowLeft"
+        ? analysisTab
+        : document.activeElement === analysisTab
+          ? dataTab
+          : analysisTab;
+  nextTab.focus();
+  selectResultTab(nextTab === analysisTab ? "analysis" : "data");
+};
+
+analysisTab.addEventListener("click", () => selectResultTab("analysis"));
+dataTab.addEventListener("click", () => selectResultTab("data"));
+analysisTab.addEventListener("keydown", handleTabKeydown);
+dataTab.addEventListener("keydown", handleTabKeydown);
+
+const resetDataPreview = (): void => {
+  dataPreviewStatus.textContent = "";
+  dataPreviewContent.replaceChildren();
+  enableDataPreviewButton.disabled = true;
+  enableDataPreviewButton.hidden = false;
+};
+
+const renderDataPreviewGate = (
+  result: DatevLiteValidationResult,
+  preview: DatevDataPreview | undefined
+): void => {
+  dataPreviewContent.replaceChildren();
+  enableDataPreviewButton.hidden = false;
+  isDataPreviewEnabled = false;
+
+  if (!preview) {
+    dataPreviewStatus.textContent = copy.dataPreview.unavailable.generic;
+    enableDataPreviewButton.disabled = true;
+    return;
+  }
+
+  if (!preview.available) {
+    dataPreviewStatus.textContent =
+      copy.dataPreview.unavailable[preview.reason ?? "generic"];
+    enableDataPreviewButton.disabled = true;
+    return;
+  }
+
+  dataPreviewStatus.textContent = copy.dataPreview.summary(
+    preview.shownDataRows,
+    preview.totalDataRows,
+    preview.rowLimit
+  );
+  if (result.status === "unsupported") {
+    dataPreviewStatus.textContent += ` ${copy.dataPreview.unsupportedNotice}`;
+  }
+  enableDataPreviewButton.disabled = false;
+};
+
+enableDataPreviewButton.addEventListener("click", () => {
+  if (!latestPreview?.available || !latestResult) return;
+  isDataPreviewEnabled = true;
+  enableDataPreviewButton.hidden = true;
+  renderEnabledDataPreview(latestResult, latestPreview);
+});
+
+const renderEnabledDataPreview = (
+  result: DatevLiteValidationResult,
+  preview: DatevDataPreview
+): void => {
+  dataPreviewContent.replaceChildren();
+  if (!isDataPreviewEnabled) return;
+
+  if (result.status === "unsupported") {
+    const notice = document.createElement("p");
+    notice.className = "data-preview-notice";
+    notice.textContent = copy.dataPreview.unsupportedNotice;
+    dataPreviewContent.append(notice);
+  }
+
+  if (preview.truncated) {
+    const truncated = document.createElement("p");
+    truncated.className = "data-preview-notice";
+    truncated.textContent = copy.dataPreview.truncated(
+      preview.shownDataRows,
+      preview.totalDataRows
+    );
+    dataPreviewContent.append(truncated);
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "table-wrap data-preview-table-wrap";
+  const table = document.createElement("table");
+  table.className = "data-preview-table";
+
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  appendHeaderCell(headRow, copy.dataPreview.line);
+  appendHeaderCell(headRow, copy.dataPreview.fieldCount);
+  const fieldCount = Math.max(
+    preview.captions.length,
+    ...preview.rows.map((row) => row.cells.length)
+  );
+  for (let index = 0; index < fieldCount; index += 1) {
+    appendHeaderCell(
+      headRow,
+      preview.captions[index]?.value || copy.dataPreview.field(index + 1)
+    );
+  }
+  thead.append(headRow);
+  table.append(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const row of preview.rows) {
+    const tableRow = document.createElement("tr");
+    appendCell(tableRow, String(row.line));
+    appendCell(tableRow, String(row.fieldCount));
+    for (let index = 0; index < fieldCount; index += 1) {
+      appendCell(tableRow, row.cells[index]?.value ?? "");
+    }
+    tbody.append(tableRow);
+  }
+  table.append(tbody);
+  wrap.append(table);
+  dataPreviewContent.append(wrap);
+};
+
+const appendHeaderCell = (row: HTMLTableRowElement, value: string): void => {
+  const cell = document.createElement("th");
+  cell.scope = "col";
+  cell.textContent = value;
+  row.append(cell);
 };
 
 const renderBadge = (result: DatevLiteValidationResult): void => {
