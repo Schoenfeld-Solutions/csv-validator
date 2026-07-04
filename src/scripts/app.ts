@@ -383,7 +383,7 @@ worker.addEventListener(
   (event: MessageEvent<WorkerValidationResponse>) => {
     const message = event.data;
     if (message.type === "progress") {
-      statusLine.textContent = message.message;
+      statusLine.textContent = copy.progress[message.code];
       return;
     }
     if (message.type === "contracts") {

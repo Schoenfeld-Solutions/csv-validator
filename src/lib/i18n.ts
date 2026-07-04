@@ -89,6 +89,14 @@ export const appCopy = {
     waiting: "Warte auf eine lokale Datei.",
     processing: "wird lokal verarbeitet",
     processed: "lokal im Browser verarbeitet",
+    progress: {
+      "read-xml-contracts": "Lokale DATEV-XML-Verträge werden gelesen.",
+      "build-xml-contract-source":
+        "Lokale DATEV-XML-Vertragsquelle wird aufgebaut.",
+      "read-file": "Datei wird im Browser-Worker gelesen.",
+      "decode-text": "Text wird deterministisch dekodiert.",
+      "validate-structure": "Lokale DATEV-CSV-Struktur wird geprüft.",
+    },
     resultKicker: "Validierungsergebnis",
     resultTitle: "Lokaler Bericht",
     ready: "Bereit",
@@ -348,6 +356,13 @@ export const appCopy = {
     waiting: "Waiting for a local file.",
     processing: "is processed locally",
     processed: "processed locally in the browser",
+    progress: {
+      "read-xml-contracts": "Reading local DATEV XML contracts.",
+      "build-xml-contract-source": "Building local DATEV XML contract source.",
+      "read-file": "Reading file in the browser worker.",
+      "decode-text": "Decoding text deterministically.",
+      "validate-structure": "Validating local DATEV CSV structure.",
+    },
     resultKicker: "Validation result",
     resultTitle: "Local report",
     ready: "Ready",

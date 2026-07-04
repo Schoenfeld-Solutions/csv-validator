@@ -157,7 +157,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
     return;
   }
 
-  post({ message: "Reading local DATEV XML contracts", type: "progress" });
+  post({ code: "read-xml-contracts", type: "progress" });
   const xmlContents: string[] = [];
   const diagnostics: DatevDiagnostic[] = [];
   for (const file of files) {
@@ -194,10 +194,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
     return;
   }
 
-  post({
-    message: "Building local DATEV XML contract source",
-    type: "progress",
-  });
+  post({ code: "build-xml-contract-source", type: "progress" });
   const imported = importDatevXmlContractSet(xmlContents);
   uploadedContractRepository = imported.repository;
   mixedContractRepository = imported.repository
@@ -313,7 +310,7 @@ const validateFile = async (
     return;
   }
 
-  post({ message: "Reading file in the browser worker", type: "progress" });
+  post({ code: "read-file", type: "progress" });
   let bytes: Uint8Array;
   try {
     bytes = await readFileBytes(file);
@@ -334,7 +331,7 @@ const validateFile = async (
     return;
   }
 
-  post({ message: "Decoding text deterministically", type: "progress" });
+  post({ code: "decode-text", type: "progress" });
   const decoded = detectAndDecodeBytes(bytes);
   if (decoded.encoding === "unknown") {
     post({
@@ -350,10 +347,7 @@ const validateFile = async (
     return;
   }
 
-  post({
-    message: "Validating local DATEV CSV structure",
-    type: "progress",
-  });
+  post({ code: "validate-structure", type: "progress" });
   post({
     contractSource: sourceSummary,
     result: validateDatevContent({

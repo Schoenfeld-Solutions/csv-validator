@@ -108,6 +108,65 @@ test("loads German and English validator routes with language switch", async ({
   ).toBeVisible();
 });
 
+test("renders worker progress messages in the active language", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class LocalizedProgressWorker {
+      private readonly listeners = new Set<EventListener>();
+
+      addEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.add(listener);
+      }
+
+      removeEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.delete(listener);
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as { readonly type?: string };
+        if (request.type !== "validate") return;
+        queueMicrotask(() => {
+          const event = new MessageEvent("message", {
+            data: { code: "read-file", type: "progress" },
+          });
+          for (const listener of this.listeners) listener(event);
+        });
+      }
+
+      terminate(): void {
+        this.listeners.clear();
+      }
+    }
+
+    Object.defineProperty(window, "Worker", {
+      configurable: true,
+      value: LocalizedProgressWorker,
+    });
+  });
+  await page.goto("/csv-validator/de/");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "lokal.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validGlAccountDescriptionCsv());
+
+  await expect(page.locator("#statusLine")).toHaveText(
+    "Datei wird im Browser-Worker gelesen."
+  );
+});
+
 test("keeps legal links only in the footer", async ({ page }) => {
   await page.goto("/csv-validator/de/");
 
