@@ -300,7 +300,10 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   await page.goto("/csv-validator/en/");
 
   await page.locator("#xmlContractInput").setInputFiles({
-    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    buffer: Buffer.from(
+      `<?xml version="1.0" encoding="UTF-8"?>${validCustomContractXml()}`,
+      "utf8"
+    ),
     mimeType: "application/xml",
     name: "synthetic-contract.xml",
   });
