@@ -22,7 +22,7 @@ npm run preflight
 - No DATEV logos, brand assets, official ZIPs, XMLs, screenshots, EXEs, HTML
   reports, decompiled content, or raw rule strings.
 - No React, Vue, Svelte, Tailwind, or UI component library dependency in the
-  MVP.
+  browser tool.
 
 ## Commits And Pull Requests
 
