@@ -10,8 +10,8 @@ tax advice, accounting advice, or checks with official DATEV tools.
 
 ## Scope
 
-The MVP validates local `.csv` and `.txt` files against a versioned, locally
-implemented DATEV CSV structural contract:
+The browser tool validates local `.csv` and `.txt` files against a versioned,
+locally implemented DATEV CSV structural contract:
 
 - CSV lexing with semicolon delimiter, double quote text qualifier, closed
   quotes, doubled quotes, and conservative control-character checks.
@@ -71,9 +71,9 @@ It does not mean that a DATEV application will accept the file.
 
 ## Out Of Scope
 
-The MVP does not implement server uploads, storage, account or login features,
-official DATEV tool execution, DATEV check-program automation, generic
-CalculationRule engines, AdditionalValidationRules, cross-record or
+This project does not implement server uploads, storage, account or login
+features, official DATEV tool execution, DATEV check-program automation,
+generic CalculationRule engines, AdditionalValidationRules, cross-record or
 cross-field booking logic, unrestricted XML rule execution, persistence of
 uploaded or edited session-local contracts, Business Central imports, or
 guarantees that official DATEV tools will make the same decision.
