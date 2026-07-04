@@ -64,6 +64,11 @@ const readFileBytes = async (
 const safeFileName = (fileName: string): string =>
   fileName.split(/[\\/]/).pop()?.trim() || "selected-file";
 
+const isDatevCsvFileName = (fileName: string): boolean => {
+  const safeName = safeFileName(fileName).toLowerCase();
+  return safeName.endsWith(".csv") || safeName.endsWith(".txt");
+};
+
 const isXmlContractFileName = (fileName: string): boolean =>
   safeFileName(fileName).toLowerCase().endsWith(".xml");
 
@@ -271,6 +276,21 @@ const validateFile = async (
           "error",
           "CONTRACT_SOURCE_MISSING",
           "The selected local DATEV XML contract source is not available."
+        ),
+      ]),
+      type: "result",
+    });
+    return;
+  }
+
+  if (!isDatevCsvFileName(file.name)) {
+    post({
+      contractSource: sourceSummary,
+      result: createRejectedResult(file.name, file.size, "unknown", [
+        diagnostic(
+          "error",
+          "FILE_TYPE_UNSUPPORTED",
+          "Local DATEV CSV validation accepts only .csv and .txt files."
         ),
       ]),
       type: "result",
