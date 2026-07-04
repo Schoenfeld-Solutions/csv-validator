@@ -2,6 +2,9 @@ import type {
   DatevActiveContractSourceKind,
   DatevContractSourceSummary,
   DatevDataPreview,
+  DatevEditableContractDraft,
+  DatevEditableFieldContractDraft,
+  DatevFormatType,
   DatevLiteDiagnostic,
   DatevLiteValidationResult,
   WorkerValidationRequest,
@@ -35,6 +38,34 @@ const contractSourceSelect = getElement<HTMLSelectElement>(
 const xmlContractStatus = getElement<HTMLParagraphElement>(
   "xmlContractStatus",
   "p"
+);
+const createEditableContractButton = getElement<HTMLButtonElement>(
+  "createEditableContractButton",
+  "button"
+);
+const contractEditorPanel = getElement<HTMLElement>(
+  "contractEditorPanel",
+  "section"
+);
+const discardEditableContractButton = getElement<HTMLButtonElement>(
+  "discardEditableContractButton",
+  "button"
+);
+const contractEditorStatus = getElement<HTMLParagraphElement>(
+  "contractEditorStatus",
+  "p"
+);
+const contractEditorRequiredCaptions = getElement<HTMLInputElement>(
+  "contractEditorRequiredCaptions",
+  "input"
+);
+const contractEditorFields = getElement<HTMLTableSectionElement>(
+  "contractEditorFields",
+  "tbody"
+);
+const applyEditableContractButton = getElement<HTMLButtonElement>(
+  "applyEditableContractButton",
+  "button"
 );
 const dropzone = getElement<HTMLLabelElement>("dropzone", "label");
 const statusLine = getElement<HTMLDivElement>("statusLine", "div");
@@ -136,12 +167,24 @@ const worker = new Worker(
   }
 );
 
+const editableFieldTypes: readonly DatevFormatType[] = [
+  "Text",
+  "Konto",
+  "Zahl",
+  "Betrag",
+  "Datum",
+];
+const editableFormatExpressions: readonly DatevEditableFieldContractDraft["formatExpression"][] =
+  ["", "TTMM", "TTMMJJJJ"];
+
 let latestResult: DatevLiteValidationResult | undefined;
 let latestReport: DatevValidationReport | undefined;
 let latestPreview: DatevDataPreview | undefined;
 let latestFile: File | undefined;
 let uploadedContractSource: DatevContractSourceSummary | undefined;
 let mixedContractSource: DatevContractSourceSummary | undefined;
+let editedContractSource: DatevContractSourceSummary | undefined;
+let editableDraft: DatevEditableContractDraft | undefined;
 let activeContractSource: DatevActiveContractSourceKind = "built-in";
 let isDataPreviewEnabled = false;
 
@@ -171,9 +214,9 @@ const formatContractSource = (
       ? copy.contractSource.uploadedSummary(summary.contractCount)
       : summary.kind === "mixed"
         ? copy.contractSource.mixedSummary(summary.contractCount)
-        : summary.kind === "built-in"
-          ? copy.contractSource.builtInSummary
-          : copy.report.contractSource[summary.kind];
+        : summary.kind === "edited-session"
+          ? copy.contractSource.editedSummary
+          : copy.contractSource.builtInSummary;
   const details = copy.contractSource.summaryDetails(
     summary.overrideCount,
     summary.warningCount
@@ -203,9 +246,19 @@ const syncContractSourceControl = (): void => {
         )
       : copy.contractSource.mixedUnavailable;
   }
+  const editedOption = contractSourceSelect.querySelector(
+    'option[value="edited-session"]'
+  );
+  if (editedOption instanceof HTMLOptionElement) {
+    editedOption.disabled = editedContractSource === undefined;
+    editedOption.textContent = editedContractSource
+      ? copy.contractSource.editedOption
+      : copy.contractSource.editedUnavailable;
+  }
   if (
     (activeContractSource === "uploaded" && !uploadedContractSource) ||
-    (activeContractSource === "mixed" && !mixedContractSource)
+    (activeContractSource === "mixed" && !mixedContractSource) ||
+    (activeContractSource === "edited-session" && !editedContractSource)
   ) {
     activeContractSource = "built-in";
   }
@@ -221,6 +274,7 @@ const validateFile = (file: File): void => {
   copyJsonButton.disabled = true;
   downloadJsonButton.disabled = true;
   downloadHtmlReportButton.disabled = true;
+  createEditableContractButton.disabled = true;
   copyStatus.textContent = "";
   resetDataPreview();
   selectResultTab("analysis");
@@ -255,16 +309,50 @@ xmlContractInput.addEventListener("change", () => {
 });
 
 contractSourceSelect.addEventListener("change", () => {
+  const selected = contractSourceSelect.value;
   activeContractSource =
-    contractSourceSelect.value === "uploaded"
+    selected === "uploaded" && uploadedContractSource
       ? "uploaded"
-      : contractSourceSelect.value === "mixed"
+      : selected === "mixed" && mixedContractSource
         ? "mixed"
-        : "built-in";
+        : selected === "edited-session" && editedContractSource
+          ? "edited-session"
+          : "built-in";
   syncContractSourceControl();
   if (latestFile) {
     validateFile(latestFile);
   }
+});
+
+createEditableContractButton.addEventListener("click", () => {
+  const recognitionCode = latestResult?.format?.recognitionCode;
+  if (!recognitionCode) return;
+  contractEditorStatus.textContent = copy.contractEditor.loading;
+  const request: WorkerValidationRequest = {
+    contractSource: activeContractSource,
+    recognitionCode,
+    type: "create-editable-contract",
+  };
+  worker.postMessage(request);
+});
+
+applyEditableContractButton.addEventListener("click", () => {
+  const draft = collectEditableDraft();
+  if (!draft) return;
+  contractEditorStatus.textContent = copy.contractEditor.applying;
+  const request: WorkerValidationRequest = {
+    draft,
+    type: "save-editable-contract",
+  };
+  worker.postMessage(request);
+});
+
+discardEditableContractButton.addEventListener("click", () => {
+  contractEditorStatus.textContent = copy.contractEditor.discarding;
+  const request: WorkerValidationRequest = {
+    type: "discard-editable-contract",
+  };
+  worker.postMessage(request);
 });
 
 for (const eventName of ["dragenter", "dragover"]) {
@@ -317,6 +405,10 @@ worker.addEventListener(
       if (latestFile) validateFile(latestFile);
       return;
     }
+    if (message.type === "editable-contract") {
+      handleEditableContractResponse(message);
+      return;
+    }
     latestResult = message.result;
     latestPreview = message.preview;
     renderResult(message.result, message.preview, message.contractSource);
@@ -334,6 +426,7 @@ const renderResult = (
   copyJsonButton.disabled = false;
   downloadJsonButton.disabled = false;
   downloadHtmlReportButton.disabled = false;
+  createEditableContractButton.disabled = result.format === undefined;
   statusLine.textContent = `${result.source.name} ${copy.processed}.`;
   renderBadge(result);
   renderMetadata(result, contractSource);
@@ -547,6 +640,11 @@ const renderContractSourceWarning = (
       copy.contractSource.overrideWarning(overrideCount);
     return;
   }
+  if (contractSource?.kind === "edited-session") {
+    contractSourceWarning.hidden = false;
+    contractSourceWarning.textContent = copy.contractSource.editedWarning;
+    return;
+  }
   contractSourceWarning.hidden = true;
   contractSourceWarning.textContent = "";
 };
@@ -589,6 +687,13 @@ const renderReportFacts = (
       copy.contractSource.overrideWarning(
         report.contractSourceSummary.overrideCount
       )
+    );
+  }
+  if (report.contractSourceSummary?.kind === "edited-session") {
+    appendFact(
+      reportFacts,
+      copy.contractSource.editedWarningLabel,
+      copy.contractSource.editedWarning
     );
   }
   appendFact(
@@ -842,6 +947,14 @@ const createHtmlReport = (
             )
           : ""
       }
+      ${
+        report.contractSourceSummary?.kind === "edited-session"
+          ? createFactHtml(
+              copy.contractSource.editedWarningLabel,
+              copy.contractSource.editedWarning
+            )
+          : ""
+      }
       ${createFactHtml(copy.metadata.recognition, result.format?.recognitionCode ?? "-")}
     </dl>
     <h2>${escapeHtml(copy.report.nextActions)}</h2>
@@ -886,3 +999,204 @@ const escapeHtml = (value: string): string =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+
+const handleEditableContractResponse = (
+  message: Extract<WorkerValidationResponse, { type: "editable-contract" }>
+): void => {
+  const codes = [...new Set(message.diagnostics.map((item) => item.code))];
+  if (message.draft) {
+    editableDraft = message.draft;
+    renderEditableDraft(message.draft);
+    contractEditorPanel.hidden = false;
+    contractEditorStatus.textContent = message.summary
+      ? copy.contractEditor.applied
+      : copy.contractEditor.loaded;
+  }
+  if (message.summary) {
+    editedContractSource = message.summary;
+    activeContractSource = "edited-session";
+    syncContractSourceControl();
+    if (latestFile) validateFile(latestFile);
+    return;
+  }
+  if (!message.draft && codes.length > 0) {
+    contractEditorStatus.textContent = copy.contractEditor.rejected(
+      codes.join(", ")
+    );
+    return;
+  }
+  if (!message.draft && codes.length === 0) {
+    editableDraft = undefined;
+    editedContractSource = undefined;
+    contractEditorFields.replaceChildren();
+    contractEditorRequiredCaptions.value = "";
+    contractEditorPanel.hidden = true;
+    if (activeContractSource === "edited-session") {
+      activeContractSource = "built-in";
+    }
+    syncContractSourceControl();
+    xmlContractStatus.textContent = copy.contractEditor.discarded;
+    if (latestFile) validateFile(latestFile);
+  }
+};
+
+const renderEditableDraft = (draft: DatevEditableContractDraft): void => {
+  contractEditorRequiredCaptions.value =
+    draft.recognition.requiredCaptions.join(", ");
+  contractEditorFields.replaceChildren();
+  for (const field of draft.fields) {
+    const row = document.createElement("tr");
+    row.dataset.fieldNumber = String(field.fieldNumber);
+    appendCell(row, String(field.fieldNumber));
+    row.append(
+      createInputCell(
+        `editableFieldCaption-${field.fieldNumber}`,
+        "editable-field-caption",
+        field.caption,
+        "text"
+      )
+    );
+    row.append(
+      createSelectCell(
+        `editableFieldType-${field.fieldNumber}`,
+        "editable-field-type",
+        field.formatType,
+        editableFieldTypes
+      )
+    );
+    row.append(
+      createInputCell(
+        `editableFieldMaxLength-${field.fieldNumber}`,
+        "editable-field-max-length",
+        String(field.maxLength),
+        "number"
+      )
+    );
+    row.append(
+      createInputCell(
+        `editableFieldDecimalPlaces-${field.fieldNumber}`,
+        "editable-field-decimal-places",
+        String(field.decimalPlaces),
+        "number"
+      )
+    );
+    row.append(
+      createCheckboxCell(
+        `editableFieldRequired-${field.fieldNumber}`,
+        "editable-field-required",
+        field.necessary
+      )
+    );
+    row.append(
+      createSelectCell(
+        `editableFieldExpression-${field.fieldNumber}`,
+        "editable-field-expression",
+        field.formatExpression,
+        editableFormatExpressions
+      )
+    );
+    contractEditorFields.append(row);
+  }
+};
+
+const createInputCell = (
+  id: string,
+  className: string,
+  value: string,
+  type: "number" | "text"
+): HTMLTableCellElement => {
+  const cell = document.createElement("td");
+  const input = document.createElement("input");
+  input.id = id;
+  input.className = className;
+  input.type = type;
+  input.value = value;
+  if (type === "number") {
+    input.min = "0";
+    input.step = "1";
+  }
+  cell.append(input);
+  return cell;
+};
+
+const createCheckboxCell = (
+  id: string,
+  className: string,
+  checked: boolean
+): HTMLTableCellElement => {
+  const cell = document.createElement("td");
+  const input = document.createElement("input");
+  input.id = id;
+  input.className = className;
+  input.type = "checkbox";
+  input.checked = checked;
+  cell.append(input);
+  return cell;
+};
+
+const createSelectCell = <T extends string>(
+  id: string,
+  className: string,
+  selectedValue: T,
+  values: readonly T[]
+): HTMLTableCellElement => {
+  const cell = document.createElement("td");
+  const select = document.createElement("select");
+  select.id = id;
+  select.className = className;
+  for (const value of values) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value || copy.contractEditor.emptyExpression;
+    option.selected = value === selectedValue;
+    select.append(option);
+  }
+  cell.append(select);
+  return cell;
+};
+
+const collectEditableDraft = (): DatevEditableContractDraft | undefined => {
+  if (!editableDraft) return undefined;
+  const fields: DatevEditableFieldContractDraft[] = [];
+  for (const row of contractEditorFields.querySelectorAll("tr")) {
+    const fieldNumber = Number(row.dataset.fieldNumber);
+    const caption = row.querySelector<HTMLInputElement>(
+      ".editable-field-caption"
+    );
+    const type = row.querySelector<HTMLSelectElement>(".editable-field-type");
+    const maxLength = row.querySelector<HTMLInputElement>(
+      ".editable-field-max-length"
+    );
+    const decimalPlaces = row.querySelector<HTMLInputElement>(
+      ".editable-field-decimal-places"
+    );
+    const necessary = row.querySelector<HTMLInputElement>(
+      ".editable-field-required"
+    );
+    const expression = row.querySelector<HTMLSelectElement>(
+      ".editable-field-expression"
+    );
+    if (!caption || !type || !maxLength || !decimalPlaces || !necessary) {
+      return undefined;
+    }
+    fields.push({
+      caption: caption.value,
+      decimalPlaces: Number.parseInt(decimalPlaces.value, 10),
+      fieldNumber,
+      formatExpression:
+        (expression?.value as DatevEditableFieldContractDraft["formatExpression"]) ??
+        "",
+      formatType: type.value as DatevFormatType,
+      maxLength: Number.parseInt(maxLength.value, 10),
+      necessary: necessary.checked,
+    });
+  }
+  return {
+    fields,
+    recognition: {
+      ...editableDraft.recognition,
+      allowedDatevMarkers: [...editableDraft.recognition.allowedDatevMarkers],
+      requiredCaptions: contractEditorRequiredCaptions.value.split(","),
+    },
+  };
+};

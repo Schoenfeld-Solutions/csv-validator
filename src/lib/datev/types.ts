@@ -42,6 +42,21 @@ export interface DatevLiteFieldRuleContract {
   readonly formatExpression: "" | "TTMM" | "TTMMJJJJ";
 }
 
+export interface DatevEditableFieldContractDraft {
+  readonly fieldNumber: number;
+  readonly caption: string;
+  readonly formatType: DatevFormatType;
+  readonly maxLength: number;
+  readonly decimalPlaces: number;
+  readonly necessary: boolean;
+  readonly formatExpression: "" | "TTMM" | "TTMMJJJJ";
+}
+
+export interface DatevEditableContractDraft {
+  readonly recognition: DatevLiteRecognitionContract;
+  readonly fields: readonly DatevEditableFieldContractDraft[];
+}
+
 export interface DatevLiteContract {
   readonly schemaVersion: 1;
   readonly recognitions: readonly DatevLiteRecognitionContract[];
@@ -161,7 +176,8 @@ export interface DatevDataPreview {
   readonly rows: readonly DatevPreviewRow[];
 }
 
-export type DatevActiveContractSourceKind = "built-in" | "uploaded" | "mixed";
+export type DatevActiveContractSourceKind =
+  "built-in" | "uploaded" | "mixed" | "edited-session";
 
 export type WorkerValidationRequest =
   | {
@@ -172,6 +188,18 @@ export type WorkerValidationRequest =
   | {
       readonly type: "load-contracts";
       readonly files: readonly File[];
+    }
+  | {
+      readonly type: "create-editable-contract";
+      readonly recognitionCode: string;
+      readonly contractSource?: DatevActiveContractSourceKind;
+    }
+  | {
+      readonly type: "save-editable-contract";
+      readonly draft: DatevEditableContractDraft;
+    }
+  | {
+      readonly type: "discard-editable-contract";
     };
 
 export interface WorkerContractLoadResponse {
@@ -188,10 +216,18 @@ export interface WorkerResultResponse {
   readonly contractSource?: DatevContractSourceSummary;
 }
 
+export interface WorkerEditableContractResponse {
+  readonly type: "editable-contract";
+  readonly draft?: DatevEditableContractDraft;
+  readonly summary?: DatevContractSourceSummary;
+  readonly diagnostics: readonly DatevLiteDiagnostic[];
+}
+
 export type WorkerValidationResponse =
   | {
       readonly type: "progress";
       readonly message: string;
     }
   | WorkerContractLoadResponse
+  | WorkerEditableContractResponse
   | WorkerResultResponse;

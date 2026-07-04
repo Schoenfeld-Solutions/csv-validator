@@ -84,7 +84,18 @@ const copy = appCopy[locale];
           <option value="mixed" disabled>
             {copy.contractSource.mixedUnavailable}
           </option>
+          <option value="edited-session" disabled>
+            {copy.contractSource.editedUnavailable}
+          </option>
         </select>
+        <button
+          class="secondary-action"
+          id="createEditableContractButton"
+          type="button"
+          disabled
+        >
+          {copy.contractEditor.create}
+        </button>
       </div>
       <p
         class="contract-source-status"
@@ -94,6 +105,61 @@ const copy = appCopy[locale];
       >
         {copy.contractSource.defaultStatus}
       </p>
+      <section
+        class="contract-editor-panel"
+        id="contractEditorPanel"
+        aria-labelledby="contractEditorTitle"
+        hidden
+      >
+        <div class="contract-editor-heading">
+          <div>
+            <p class="section-kicker">{copy.contractEditor.kicker}</p>
+            <h2 id="contractEditorTitle">{copy.contractEditor.title}</h2>
+          </div>
+          <button
+            class="secondary-action"
+            id="discardEditableContractButton"
+            type="button"
+          >
+            {copy.contractEditor.discard}
+          </button>
+        </div>
+        <p class="contract-source-copy" id="contractEditorStatus"></p>
+        <label
+          class="contract-editor-required-label"
+          for="contractEditorRequiredCaptions"
+        >
+          {copy.contractEditor.requiredCaptions}
+        </label>
+        <input
+          class="contract-editor-required-input"
+          id="contractEditorRequiredCaptions"
+          type="text"
+        />
+        <div class="table-wrap contract-editor-table-wrap">
+          <table class="contract-editor-table">
+            <thead>
+              <tr>
+                <th scope="col">{copy.contractEditor.fieldNumber}</th>
+                <th scope="col">{copy.contractEditor.caption}</th>
+                <th scope="col">{copy.contractEditor.type}</th>
+                <th scope="col">{copy.contractEditor.maxLength}</th>
+                <th scope="col">{copy.contractEditor.decimalPlaces}</th>
+                <th scope="col">{copy.contractEditor.required}</th>
+                <th scope="col">{copy.contractEditor.expression}</th>
+              </tr>
+            </thead>
+            <tbody id="contractEditorFields"></tbody>
+          </table>
+        </div>
+        <button
+          class="secondary-action"
+          id="applyEditableContractButton"
+          type="button"
+        >
+          {copy.contractEditor.apply}
+        </button>
+      </section>
     </section>
 
     <div class="status-line" id="statusLine" role="status" aria-live="polite">
