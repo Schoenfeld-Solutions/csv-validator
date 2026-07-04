@@ -221,10 +221,17 @@ export interface WorkerEditableContractResponse {
   readonly diagnostics: readonly DatevDiagnostic[];
 }
 
+export type WorkerProgressCode =
+  | "read-xml-contracts"
+  | "build-xml-contract-source"
+  | "read-file"
+  | "decode-text"
+  | "validate-structure";
+
 export type WorkerValidationResponse =
   | {
       readonly type: "progress";
-      readonly message: string;
+      readonly code: WorkerProgressCode;
     }
   | WorkerContractLoadResponse
   | WorkerEditableContractResponse
