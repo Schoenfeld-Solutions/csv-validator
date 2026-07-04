@@ -42,6 +42,7 @@ policies:
 
 - expected workflow files, permissions, concurrency, and job timeouts,
 - stable required check names for the ruleset,
+- canonical preflight coverage, including public copy checks,
 - no use of `pull_request_target`,
 - low-noise Dependabot for npm and GitHub Actions,
 - `.local/` is included in Git and tooling ignores and is not tracked,

@@ -171,6 +171,7 @@ const validatePackageScripts = async () => {
   for (const [scriptName, expectedCommand] of Object.entries({
     "audit:ci": "npm audit --audit-level=low",
     "check:governance": "node scripts/check-repo-governance.mjs",
+    "check:public-copy": "node scripts/check-public-copy.mjs",
     "check:pr-title": "node scripts/check-pr-title.mjs",
     preflight: "bash bin/checks/preflight.sh",
     "test:e2e": "playwright test",
@@ -191,6 +192,7 @@ const validatePreflight = async () => {
   const text = await readText(path);
   requireSnippet(path, text, "npm run check:governance");
   requireSnippet(path, text, "npm run audit:ci");
+  requireSnippet(path, text, "npm run check:public-copy");
   requireSnippet(path, text, "npm run test:coverage");
   requireSnippet(path, text, "npm run test:e2e");
   requireSnippet(path, text, "npm run test:lighthouse");
