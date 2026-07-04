@@ -39,6 +39,89 @@ export const BUILT_IN_CONTRACT_REPOSITORY: DatevContractRepository = {
   },
 };
 
+export const createMixedContractRepository = (
+  builtInRepository: DatevContractRepository,
+  uploadedRepository: DatevContractRepository
+): DatevContractRepository => {
+  const uploadedRecognitions = uploadedRepository.listRecognitions();
+  const uploadedBySignature = new Map(
+    uploadedRecognitions.map((recognition) => [
+      recognitionSignature(recognition),
+      recognition,
+    ])
+  );
+  const uploadedRecognitionCodes = new Set(
+    uploadedRecognitions.map((recognition) => recognition.recognitionCode)
+  );
+  const builtInRecognitions = builtInRepository.listRecognitions();
+  const overriddenSignatures = new Set<string>();
+  const collidedBuiltInCodes = new Set<string>();
+
+  for (const builtInRecognition of builtInRecognitions) {
+    const signature = recognitionSignature(builtInRecognition);
+    if (uploadedBySignature.has(signature)) {
+      overriddenSignatures.add(signature);
+    } else if (
+      uploadedRecognitionCodes.has(builtInRecognition.recognitionCode)
+    ) {
+      collidedBuiltInCodes.add(builtInRecognition.recognitionCode);
+    }
+  }
+
+  const retainedBuiltInRecognitions = builtInRecognitions.filter(
+    (recognition) =>
+      !overriddenSignatures.has(recognitionSignature(recognition)) &&
+      !collidedBuiltInCodes.has(recognition.recognitionCode)
+  );
+  const mixedRecognitions = [
+    ...retainedBuiltInRecognitions,
+    ...uploadedRecognitions,
+  ];
+  const overrideCount = overriddenSignatures.size;
+
+  return {
+    findRecognitionBySignature: (
+      category: string,
+      name: string,
+      version: string
+    ): DatevLiteRecognitionContract | undefined => {
+      const signature = signatureFromParts(category, name, version);
+      const uploadedRecognition = uploadedBySignature.get(signature);
+      if (uploadedRecognition) return uploadedRecognition;
+
+      const builtInRecognition = builtInRepository.findRecognitionBySignature(
+        category,
+        name,
+        version
+      );
+      return builtInRecognition &&
+        !collidedBuiltInCodes.has(builtInRecognition.recognitionCode)
+        ? builtInRecognition
+        : undefined;
+    },
+    getFields: (
+      recognitionCode: string
+    ): readonly DatevLiteFieldContract[] | undefined =>
+      uploadedRepository.getFields(recognitionCode) ??
+      builtInRepository.getFields(recognitionCode),
+    getRules: (
+      recognitionCode: string
+    ): readonly DatevLiteFieldRuleContract[] | undefined =>
+      uploadedRepository.getRules(recognitionCode) ??
+      builtInRepository.getRules(recognitionCode),
+    listRecognitions: (): readonly DatevLiteRecognitionContract[] =>
+      mixedRecognitions,
+    summary: {
+      contractCount: mixedRecognitions.length,
+      kind: "mixed",
+      label: "Built-in plus uploaded DATEV XML contracts",
+      overrideCount,
+      warningCount:
+        uploadedRepository.summary.warningCount + (overrideCount > 0 ? 1 : 0),
+    },
+  };
+};
+
 export const SUPPORTED_FORMATS =
   BUILT_IN_CONTRACT_REPOSITORY.listRecognitions();
 
@@ -68,3 +151,18 @@ export const isAllowedMarker = (
   marker: string
 ): marker is DatevMarker =>
   recognition.allowedDatevMarkers.includes(marker as DatevMarker);
+
+const recognitionSignature = (
+  recognition: DatevLiteRecognitionContract
+): string =>
+  signatureFromParts(
+    recognition.formatCategory,
+    recognition.formatName,
+    recognition.formatVersion
+  );
+
+const signatureFromParts = (
+  category: string,
+  name: string,
+  version: string
+): string => [category, name, version].join("\u0000");

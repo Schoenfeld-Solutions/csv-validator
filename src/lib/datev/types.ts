@@ -54,7 +54,7 @@ export interface DatevLiteContract {
 }
 
 export type DatevContractSourceKind =
-  "built-in" | "uploaded" | "edited-session";
+  "built-in" | "uploaded" | "mixed" | "edited-session";
 
 export interface DatevContractSourceSummary {
   readonly kind: DatevContractSourceKind;
@@ -161,7 +161,7 @@ export interface DatevDataPreview {
   readonly rows: readonly DatevPreviewRow[];
 }
 
-export type DatevActiveContractSourceKind = "built-in" | "uploaded";
+export type DatevActiveContractSourceKind = "built-in" | "uploaded" | "mixed";
 
 export type WorkerValidationRequest =
   | {
@@ -177,6 +177,7 @@ export type WorkerValidationRequest =
 export interface WorkerContractLoadResponse {
   readonly type: "contracts";
   readonly summary?: DatevContractSourceSummary;
+  readonly mixedSummary?: DatevContractSourceSummary;
   readonly diagnostics: readonly DatevLiteDiagnostic[];
 }
 

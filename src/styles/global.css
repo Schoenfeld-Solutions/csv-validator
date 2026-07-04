@@ -409,6 +409,16 @@ main {
   padding: 7px 34px 7px 10px;
 }
 
+.contract-source-warning {
+  background: color-mix(in srgb, var(--warning) 10%, var(--panel));
+  border: 1px solid var(--warning);
+  border-radius: 7px;
+  color: var(--warning);
+  font-size: 0.92rem;
+  font-weight: 750;
+  padding: 9px 10px;
+}
+
 .trust-block {
   color: var(--muted);
   display: grid;
