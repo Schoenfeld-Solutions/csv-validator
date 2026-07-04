@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 const distDirectory = path.resolve("dist");
@@ -39,39 +40,51 @@ const collectPublicSourceFiles = async () =>
     await collectTrackedFiles(["*.ts", "*.tsx", "*.js", "*.mjs", "*.astro"])
   ).filter((file) => file !== "scripts/check-public-copy.mjs");
 
-const assertPublicCopy = (text, sourceLabel) => {
+export const assertPublicCopy = (text, sourceLabel) => {
   if (/\bLite\b|datev-lite/i.test(text)) {
     throw new Error(`${sourceLabel} still contains legacy Lite naming.`);
   }
   if (/PLACEHOLDER/i.test(text)) {
     throw new Error(`${sourceLabel} contains placeholder text.`);
   }
+  if (/\bMVP\b/.test(text)) {
+    throw new Error(`${sourceLabel} contains outdated MVP wording.`);
+  }
 };
 
-const assertNoLegacySourceIdentifiers = (text, sourceLabel) => {
+export const assertNoLegacySourceIdentifiers = (text, sourceLabel) => {
   if (/DatevLite|DATEV_LITE|datev-lite/.test(text)) {
     throw new Error(`${sourceLabel} still contains a legacy validator name.`);
   }
 };
 
-const markdownFiles = await collectPublicMarkdownFiles();
-for (const markdownFile of markdownFiles) {
-  assertPublicCopy(await readFile(markdownFile, "utf8"), markdownFile);
-}
+const main = async () => {
+  const markdownFiles = await collectPublicMarkdownFiles();
+  for (const markdownFile of markdownFiles) {
+    assertPublicCopy(await readFile(markdownFile, "utf8"), markdownFile);
+  }
 
-const sourceFiles = await collectPublicSourceFiles();
-for (const sourceFile of sourceFiles) {
-  assertNoLegacySourceIdentifiers(
-    await readFile(sourceFile, "utf8"),
-    sourceFile
-  );
-}
+  const sourceFiles = await collectPublicSourceFiles();
+  for (const sourceFile of sourceFiles) {
+    assertNoLegacySourceIdentifiers(
+      await readFile(sourceFile, "utf8"),
+      sourceFile
+    );
+  }
 
-const htmlFiles = await collectHtmlFiles(distDirectory);
-if (htmlFiles.length === 0) {
-  throw new Error("No built HTML files found in dist/.");
-}
+  const htmlFiles = await collectHtmlFiles(distDirectory);
+  if (htmlFiles.length === 0) {
+    throw new Error("No built HTML files found in dist/.");
+  }
 
-for (const htmlFile of htmlFiles) {
-  assertPublicCopy(await readFile(htmlFile, "utf8"), htmlFile);
+  for (const htmlFile of htmlFiles) {
+    assertPublicCopy(await readFile(htmlFile, "utf8"), htmlFile);
+  }
+};
+
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  await main();
 }
