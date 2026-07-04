@@ -225,7 +225,7 @@ const validateDocumentation = async () => {
   for (const snippet of [
     "npm run preflight",
     "git diff --check",
-    "git ls-files .local",
+    "git ls-files .local docs/plans",
     "squash merge",
     "fast-forward",
   ]) {

@@ -13,7 +13,7 @@
 
 - [ ] `npm run preflight`
 - [ ] `git diff --check`
-- [ ] `git ls-files .local` returns no tracked files
+- [ ] `git ls-files .local docs/plans` returns no tracked files
 
 ## Security and Privacy
 
