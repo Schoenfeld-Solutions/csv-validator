@@ -53,6 +53,33 @@ export interface DatevLiteContract {
   >;
 }
 
+export type DatevContractSourceKind =
+  "built-in" | "uploaded" | "edited-session";
+
+export interface DatevContractSourceSummary {
+  readonly kind: DatevContractSourceKind;
+  readonly label: string;
+  readonly contractCount: number;
+  readonly overrideCount: number;
+  readonly warningCount: number;
+}
+
+export interface DatevContractRepository {
+  readonly summary: DatevContractSourceSummary;
+  listRecognitions(): readonly DatevLiteRecognitionContract[];
+  findRecognitionBySignature(
+    category: string,
+    name: string,
+    version: string
+  ): DatevLiteRecognitionContract | undefined;
+  getFields(
+    recognitionCode: DatevRecognitionCode
+  ): readonly DatevLiteFieldContract[] | undefined;
+  getRules(
+    recognitionCode: DatevRecognitionCode
+  ): readonly DatevLiteFieldRuleContract[] | undefined;
+}
+
 export interface DatevLiteDiagnostic {
   readonly severity: DiagnosticSeverity;
   readonly code: string;
