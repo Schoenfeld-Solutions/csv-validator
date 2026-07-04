@@ -337,6 +337,40 @@ test("rejects unsupported primary file names before reading content", async ({
   expect(htmlReport).not.toContain("primary-secret-value");
 });
 
+test("does not show path-like file names while processing starts", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  const immediateStatus = await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    const statusLine = document.getElementById("statusLine");
+    if (!dropzone) throw new Error("dropzone missing");
+    if (!statusLine) throw new Error("status line missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "/private/path/safe-name.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+    return statusLine.textContent ?? "";
+  }, validGlAccountDescriptionCsv());
+
+  expect(immediateStatus).toContain("safe-name.csv");
+  expect(immediateStatus).not.toContain("/private/path");
+  expect(immediateStatus).not.toContain("\\private\\path");
+
+  await expect(page.locator("#statusLine")).toContainText(
+    "safe-name.csv processed locally in the browser."
+  );
+  await expect(page.locator("#statusLine")).not.toContainText("/private/path");
+});
+
 test("escapes browser file names in downloaded HTML reports", async ({
   page,
 }) => {

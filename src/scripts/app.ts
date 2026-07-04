@@ -205,6 +205,9 @@ const formatBytes = (bytes: number): string => {
   }).format(value)} ${units[unitIndex]}`;
 };
 
+const safeBrowserFileName = (fileName: string): string =>
+  fileName.split(/[\\/]/).pop()?.trim() || "selected-file";
+
 const formatContractSource = (
   summary: DatevContractSourceSummary | undefined
 ): string => {
@@ -279,10 +282,11 @@ const validateFile = (file: File): void => {
   resetDataPreview();
   selectResultTab("analysis");
   resultPanel.hidden = true;
+  const displayName = safeBrowserFileName(file.name);
   statusLine.textContent =
     locale === "de"
-      ? `${file.name} (${formatBytes(file.size)}) ${copy.processing}...`
-      : `${file.name} (${formatBytes(file.size)}) ${copy.processing}...`;
+      ? `${displayName} (${formatBytes(file.size)}) ${copy.processing}...`
+      : `${displayName} (${formatBytes(file.size)}) ${copy.processing}...`;
   const request: WorkerValidationRequest = {
     contractSource: activeContractSource,
     file,
