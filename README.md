@@ -42,9 +42,9 @@ implemented DATEV CSV structural contract:
   replace built-in structural facts for the current session. Edited
   session-local contracts are cloned from the active local source, never mutate
   built-in defaults, and are discarded with the browser session. XML contract
-  parsing accepts a single safe leading XML declaration and rejects DOCTYPE
-  declarations, entities, external references, and arbitrary processing
-  instructions before interpretation.
+  uploads must use `.xml` file names. Parsing accepts a single safe leading XML
+  declaration and rejects DOCTYPE declarations, entities, external references,
+  and arbitrary processing instructions before interpretation.
 
 The status `valid` means only:
 
@@ -121,7 +121,8 @@ processing of DATEV files.
 - Uploaded DATEV format XML files are parsed locally in the browser worker,
   kept only for the current session, and never uploaded or stored by the site.
 - XML contract files are interpreted only as a constrained local structural
-  contract subset; raw XML is not rendered, exported, or persisted.
+  contract subset; raw XML is not rendered, exported, or persisted. Files
+  without a `.xml` name are rejected before parsing.
 - Edited session-local contract copies are derived and applied only in browser
   memory. Built-in contract data is not modified.
 - Contract-source labels, counts, and override warnings are local UI/report

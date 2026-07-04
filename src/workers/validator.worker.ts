@@ -64,6 +64,9 @@ const readFileBytes = async (
 const safeFileName = (fileName: string): string =>
   fileName.split(/[\\/]/).pop()?.trim() || "selected-file";
 
+const isXmlContractFileName = (fileName: string): boolean =>
+  safeFileName(fileName).toLowerCase().endsWith(".xml");
+
 const getContractRepository = (
   source: DatevActiveContractSourceKind | undefined
 ): DatevContractRepository | undefined =>
@@ -111,6 +114,16 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   let totalBytes = 0;
   const sizeDiagnostics: DatevLiteDiagnostic[] = [];
   for (const file of files) {
+    if (!isXmlContractFileName(file.name)) {
+      sizeDiagnostics.push(
+        diagnostic(
+          "error",
+          "XML_CONTRACT_FILE_TYPE_UNSUPPORTED",
+          "Local DATEV XML contract uploads must use .xml files.",
+          { fieldName: safeFileName(file.name) }
+        )
+      );
+    }
     totalBytes += file.size;
     if (file.size > MAX_XML_CONTRACT_FILE_SIZE_BYTES) {
       sizeDiagnostics.push(
