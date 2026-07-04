@@ -115,6 +115,40 @@ export const appCopy = {
       copied: "JSON kopiert.",
       copyFailed: "Kopieren fehlgeschlagen.",
     },
+    tabs: {
+      label: "Ergebnisansichten",
+      analysis: "Analyse",
+      data: "Daten",
+    },
+    dataPreview: {
+      kicker: "Datenansicht",
+      title: "Lokale CSV-/TXT-Vorschau",
+      warning:
+        "Rohwerte können sensible Buchhaltungs- oder Personendaten enthalten. Aktivieren Sie die Vorschau nur, wenn die Werte auf diesem Bildschirm sichtbar sein dürfen.",
+      warningItems: [
+        "Die Werte bleiben lokal im Browser.",
+        "Es findet kein Upload statt.",
+        "Die Vorschau wird nicht in JSON- oder HTML-Berichte exportiert.",
+      ],
+      enable: "Datenvorschau anzeigen",
+      line: "Zeile",
+      fieldCount: "Felder",
+      field: (index: number) => `Feld ${index}`,
+      summary: (shown: number, total: number, limit: number) =>
+        `${shown} von ${total} Datenzeilen können nach Freigabe angezeigt werden. Limit: ${limit} Zeilen.`,
+      truncated: (shown: number, total: number) =>
+        `Die Vorschau ist auf ${shown} von ${total} Datenzeilen begrenzt.`,
+      unsupportedNotice:
+        "Kein unterstützter lokaler Vertrag passt zu dieser Datei; diese Ansicht ist nur eine roh geparste CSV-Vorschau.",
+      unavailable: {
+        generic: "Für diese Datei ist keine Datenvorschau verfügbar.",
+        "csv-lexing-failed":
+          "Die CSV-Lexik ist fehlgeschlagen; Rohwerte werden nicht angezeigt.",
+        "no-caption-row":
+          "Keine Caption-Zeile für eine Tabellenansicht gefunden.",
+        "no-data-rows": "Keine Datenzeilen für eine Tabellenansicht gefunden.",
+      },
+    },
     report: {
       kicker: "Generierter Bericht",
       title: "Strukturierter Validierungsbericht",
@@ -253,6 +287,38 @@ export const appCopy = {
       downloadHtml: "Download HTML report",
       copied: "JSON copied.",
       copyFailed: "Clipboard copy failed.",
+    },
+    tabs: {
+      label: "Result views",
+      analysis: "Analysis",
+      data: "Data",
+    },
+    dataPreview: {
+      kicker: "Data view",
+      title: "Local CSV/TXT preview",
+      warning:
+        "Raw values can contain sensitive accounting or personal data. Enable the preview only when these values may be visible on this screen.",
+      warningItems: [
+        "Values stay local in the browser.",
+        "No upload takes place.",
+        "The preview is not exported to JSON or HTML reports.",
+      ],
+      enable: "Show data preview",
+      line: "Line",
+      fieldCount: "Fields",
+      field: (index: number) => `Field ${index}`,
+      summary: (shown: number, total: number, limit: number) =>
+        `${shown} of ${total} data rows can be shown after approval. Limit: ${limit} rows.`,
+      truncated: (shown: number, total: number) =>
+        `Preview is limited to ${shown} of ${total} data rows.`,
+      unsupportedNotice:
+        "No supported local contract matched this file; this is a raw parsed CSV preview only.",
+      unavailable: {
+        generic: "No data preview is available for this file.",
+        "csv-lexing-failed": "CSV lexing failed; raw values are not displayed.",
+        "no-caption-row": "No caption row was found for a table view.",
+        "no-data-rows": "No data rows were found for a table view.",
+      },
     },
     report: {
       kicker: "Generated report",

@@ -72,116 +72,178 @@ const copy = appCopy[locale];
 
       <p class="result-statement" id="resultStatement"></p>
 
-      <dl class="meta-grid" aria-label="Detected metadata">
-        <div>
-          <dt>{copy.metadata.recognition}</dt>
-          <dd id="metaRecognition">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.format}</dt>
-          <dd id="metaFormat">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.marker}</dt>
-          <dd id="metaMarker">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.encoding}</dt>
-          <dd id="metaEncoding">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.delimiter}</dt>
-          <dd id="metaDelimiter">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.rows}</dt>
-          <dd id="metaRows">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.dataRows}</dt>
-          <dd id="metaDataRows">-</dd>
-        </div>
-        <div>
-          <dt>{copy.metadata.fields}</dt>
-          <dd id="metaFields">-</dd>
-        </div>
-      </dl>
-
-      <div class="result-actions">
+      <div class="result-tabs" role="tablist" aria-label={copy.tabs.label}>
         <button
-          class="secondary-action"
-          id="copyJsonButton"
+          id="analysisTab"
+          class="result-tab is-active"
           type="button"
-          disabled
+          role="tab"
+          aria-selected="true"
+          aria-controls="analysisPanel"
         >
-          {copy.actions.copy}
+          {copy.tabs.analysis}
         </button>
         <button
-          class="secondary-action"
-          id="downloadJsonButton"
+          id="dataTab"
+          class="result-tab"
           type="button"
-          disabled
+          role="tab"
+          aria-selected="false"
+          aria-controls="dataPanel"
+          tabindex="-1"
         >
-          {copy.actions.download}
+          {copy.tabs.data}
         </button>
-        <button
-          class="secondary-action"
-          id="downloadHtmlReportButton"
-          type="button"
-          disabled
-        >
-          {copy.actions.downloadHtml}
-        </button>
-        <span id="copyStatus" class="copy-status" aria-live="polite"></span>
       </div>
 
-      <section class="report-block" aria-labelledby="reportSectionsTitle">
-        <div class="report-heading">
+      <section
+        id="analysisPanel"
+        class="tab-panel is-active"
+        role="tabpanel"
+        aria-labelledby="analysisTab"
+      >
+        <dl class="meta-grid" aria-label="Detected metadata">
           <div>
-            <p class="section-kicker">{copy.report.kicker}</p>
-            <h3 id="reportSectionsTitle">{copy.report.title}</h3>
+            <dt>{copy.metadata.recognition}</dt>
+            <dd id="metaRecognition">-</dd>
           </div>
-          <span id="reportGeneratedAt"></span>
+          <div>
+            <dt>{copy.metadata.format}</dt>
+            <dd id="metaFormat">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.marker}</dt>
+            <dd id="metaMarker">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.encoding}</dt>
+            <dd id="metaEncoding">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.delimiter}</dt>
+            <dd id="metaDelimiter">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.rows}</dt>
+            <dd id="metaRows">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.dataRows}</dt>
+            <dd id="metaDataRows">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.fields}</dt>
+            <dd id="metaFields">-</dd>
+          </div>
+        </dl>
+
+        <div class="result-actions">
+          <button
+            class="secondary-action"
+            id="copyJsonButton"
+            type="button"
+            disabled
+          >
+            {copy.actions.copy}
+          </button>
+          <button
+            class="secondary-action"
+            id="downloadJsonButton"
+            type="button"
+            disabled
+          >
+            {copy.actions.download}
+          </button>
+          <button
+            class="secondary-action"
+            id="downloadHtmlReportButton"
+            type="button"
+            disabled
+          >
+            {copy.actions.downloadHtml}
+          </button>
+          <span id="copyStatus" class="copy-status" aria-live="polite"></span>
         </div>
-        <p id="reportIntro" class="report-intro"></p>
-        <dl class="report-facts" id="reportFacts"></dl>
-        <div
-          class="report-section-list"
-          id="reportSectionsList"
-          aria-label={copy.report.sectionsLabel}
-        >
-        </div>
-        <div class="report-actions-block">
-          <h3>{copy.report.nextActions}</h3>
-          <ul id="reportActionsList"></ul>
+
+        <section class="report-block" aria-labelledby="reportSectionsTitle">
+          <div class="report-heading">
+            <div>
+              <p class="section-kicker">{copy.report.kicker}</p>
+              <h3 id="reportSectionsTitle">{copy.report.title}</h3>
+            </div>
+            <span id="reportGeneratedAt"></span>
+          </div>
+          <p id="reportIntro" class="report-intro"></p>
+          <dl class="report-facts" id="reportFacts"></dl>
+          <div
+            class="report-section-list"
+            id="reportSectionsList"
+            aria-label={copy.report.sectionsLabel}
+          >
+          </div>
+          <div class="report-actions-block">
+            <h3>{copy.report.nextActions}</h3>
+            <ul id="reportActionsList"></ul>
+          </div>
+        </section>
+
+        <div class="diagnostics-card">
+          <div class="diagnostics-heading">
+            <h3>{copy.diagnostics.title}</h3>
+            <span id="diagnosticSummary">{copy.diagnostics.summary(0, 0)}</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{copy.diagnostics.severity}</th>
+                  <th scope="col">{copy.diagnostics.code}</th>
+                  <th scope="col">{copy.diagnostics.line}</th>
+                  <th scope="col">{copy.diagnostics.column}</th>
+                  <th scope="col">{copy.diagnostics.field}</th>
+                  <th scope="col">{copy.diagnostics.message}</th>
+                </tr>
+              </thead>
+              <tbody id="diagnosticsBody">
+                <tr>
+                  <td colspan="6">{copy.diagnostics.empty}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      <div class="diagnostics-card">
-        <div class="diagnostics-heading">
-          <h3>{copy.diagnostics.title}</h3>
-          <span id="diagnosticSummary">{copy.diagnostics.summary(0, 0)}</span>
+      <section
+        id="dataPanel"
+        class="tab-panel"
+        role="tabpanel"
+        aria-labelledby="dataTab"
+        hidden
+      >
+        <div class="data-preview-card">
+          <div>
+            <p class="section-kicker">{copy.dataPreview.kicker}</p>
+            <h3>{copy.dataPreview.title}</h3>
+          </div>
+          <p id="dataPreviewStatus" class="data-preview-status"></p>
+          <div class="preview-warning" id="dataPreviewWarning">
+            <p>{copy.dataPreview.warning}</p>
+            <ul>
+              {copy.dataPreview.warningItems.map((item) => <li>{item}</li>)}
+            </ul>
+          </div>
+          <button
+            class="secondary-action"
+            id="enableDataPreviewButton"
+            type="button"
+            disabled
+          >
+            {copy.dataPreview.enable}
+          </button>
+          <div id="dataPreviewContent" class="data-preview-content"></div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">{copy.diagnostics.severity}</th>
-                <th scope="col">{copy.diagnostics.code}</th>
-                <th scope="col">{copy.diagnostics.line}</th>
-                <th scope="col">{copy.diagnostics.column}</th>
-                <th scope="col">{copy.diagnostics.field}</th>
-                <th scope="col">{copy.diagnostics.message}</th>
-              </tr>
-            </thead>
-            <tbody id="diagnosticsBody">
-              <tr>
-                <td colspan="6">{copy.diagnostics.empty}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </section>
     </section>
   </section>
 

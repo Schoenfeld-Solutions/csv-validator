@@ -7,6 +7,7 @@ import {
   createRejectedResult,
   validateDatevContent,
 } from "../lib/datev/validator";
+import { buildDatevDataPreview } from "../lib/datev/preview";
 import type {
   WorkerValidationRequest,
   WorkerValidationResponse,
@@ -107,6 +108,7 @@ self.addEventListener(
           sizeBytes: file.size,
           sourceName: file.name,
         }),
+        preview: buildDatevDataPreview(decoded.content),
         type: "result",
       });
     })();
