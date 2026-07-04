@@ -85,13 +85,67 @@ describe("validateDatevContent", () => {
     expect(result.summary.errorCount).toBe(0);
   });
 
-  it("keeps contract health invariants for numeric runtime fields", () => {
+  it("keeps contract health invariants for built-in fields and runtime anchors", () => {
+    const expectedFieldCounts: Record<string, number> = {
+      "datev-booking-batch-v10": 121,
+      "datev-booking-batch-v11": 122,
+      "datev-booking-batch-v12": 124,
+      "datev-booking-batch-v13": 125,
+      "datev-debitor-kreditor-v5": 254,
+      "datev-gl-account-description-v3": 4,
+      "datev-natural-stack-v2": 15,
+      "datev-payment-terms-v2": 31,
+      "datev-recurring-bookings-v3": 99,
+      "datev-recurring-bookings-v4": 101,
+      "datev-text-key-v2": 6,
+      "datev-various-addresses-v2": 191,
+    };
+    const formatExpressionCounts: Record<string, number> = {};
+    const formatTypeCounts: Record<string, number> = {};
+    let totalFieldCount = 0;
+    let totalRuleCount = 0;
+
     expect(SUPPORTED_FORMATS).toHaveLength(12);
     for (const recognition of SUPPORTED_FORMATS) {
-      expect(getFields(recognition.recognitionCode)).toHaveLength(
-        getRules(recognition.recognitionCode).length
-      );
+      const fields = getFields(recognition.recognitionCode);
+      const rules = getRules(recognition.recognitionCode);
+      const expectedFieldCount =
+        expectedFieldCounts[recognition.recognitionCode];
+      if (expectedFieldCount === undefined) {
+        throw new Error(
+          `Missing expected field count for ${recognition.recognitionCode}`
+        );
+      }
+      expect(fields).toHaveLength(expectedFieldCount);
+      expect(rules).toHaveLength(fields.length);
+      totalFieldCount += fields.length;
+      totalRuleCount += rules.length;
+      for (const [index, field] of fields.entries()) {
+        const rule = rules[index];
+        expect(field.fieldNumber).toBe(index + 1);
+        expect(rule?.fieldNumber).toBe(field.fieldNumber);
+      }
+      for (const rule of rules) {
+        formatExpressionCounts[rule.formatExpression] =
+          (formatExpressionCounts[rule.formatExpression] ?? 0) + 1;
+        formatTypeCounts[rule.formatType] =
+          (formatTypeCounts[rule.formatType] ?? 0) + 1;
+      }
     }
+    expect(totalFieldCount).toBe(1193);
+    expect(totalRuleCount).toBe(1193);
+    expect(formatExpressionCounts).toEqual({
+      "": 1175,
+      TTMM: 4,
+      TTMMJJJJ: 14,
+    });
+    expect(formatTypeCounts).toEqual({
+      Betrag: 22,
+      Datum: 94,
+      Konto: 24,
+      Text: 813,
+      Zahl: 240,
+    });
 
     const paymentFields = getFields("datev-payment-terms-v2");
     const paymentRules = getRules("datev-payment-terms-v2");
