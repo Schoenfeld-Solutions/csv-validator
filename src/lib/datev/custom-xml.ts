@@ -2,10 +2,10 @@ import { diagnostic } from "./diagnostics";
 import { parseXmlSubset, type XmlNode } from "./xml-subset";
 import type {
   DatevContractRepository,
-  DatevLiteDiagnostic,
-  DatevLiteFieldContract,
-  DatevLiteFieldRuleContract,
-  DatevLiteRecognitionContract,
+  DatevDiagnostic,
+  DatevFieldContract,
+  DatevFieldRuleContract,
+  DatevRecognitionContract,
   DatevMarker,
   DatevFormatType,
 } from "./types";
@@ -27,17 +27,17 @@ const SAFE_XML_DECLARATION_PATTERN =
 
 export interface DatevXmlContractImportResult {
   readonly repository?: DatevContractRepository;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 }
 
 export const importDatevXmlContractSet = (
   xmlFiles: readonly string[],
   label = "Uploaded DATEV XML contracts"
 ): DatevXmlContractImportResult => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
-  const recognitions: DatevLiteRecognitionContract[] = [];
-  const fieldsByCode = new Map<string, readonly DatevLiteFieldContract[]>();
-  const rulesByCode = new Map<string, readonly DatevLiteFieldRuleContract[]>();
+  const diagnostics: DatevDiagnostic[] = [];
+  const recognitions: DatevRecognitionContract[] = [];
+  const fieldsByCode = new Map<string, readonly DatevFieldContract[]>();
+  const rulesByCode = new Map<string, readonly DatevFieldRuleContract[]>();
   const seenSignatures = new Set<string>();
 
   if (xmlFiles.length === 0) {
@@ -108,7 +108,7 @@ export const importDatevXmlContractSet = (
         category: string,
         name: string,
         version: string
-      ): DatevLiteRecognitionContract | undefined =>
+      ): DatevRecognitionContract | undefined =>
         recognitions.find(
           (recognition) =>
             recognition.formatCategory === category &&
@@ -135,9 +135,9 @@ const parseSupportedXml = (
   fileIndex: number
 ): {
   readonly root?: XmlNode;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 } => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+  const diagnostics: DatevDiagnostic[] = [];
   const xmlWithoutDeclaration = stripSafeXmlDeclaration(xml);
   if (XML_SECURITY_PATTERN.test(xmlWithoutDeclaration)) {
     return {
@@ -242,13 +242,13 @@ const convertContract = (
   fileIndex: number
 ): {
   readonly contract?: {
-    readonly recognition: DatevLiteRecognitionContract;
-    readonly fields: readonly DatevLiteFieldContract[];
-    readonly rules: readonly DatevLiteFieldRuleContract[];
+    readonly recognition: DatevRecognitionContract;
+    readonly fields: readonly DatevFieldContract[];
+    readonly rules: readonly DatevFieldRuleContract[];
   };
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 } => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+  const diagnostics: DatevDiagnostic[] = [];
   const recognitionCode = requireRecognitionCode(
     contract.attributes.recognitionCode,
     diagnostics
@@ -287,8 +287,8 @@ const convertContract = (
       )
     );
   }
-  const fieldContracts: DatevLiteFieldContract[] = [];
-  const ruleContracts: DatevLiteFieldRuleContract[] = [];
+  const fieldContracts: DatevFieldContract[] = [];
+  const ruleContracts: DatevFieldRuleContract[] = [];
 
   for (const [index, field] of fields.entries()) {
     const converted = convertField(field, index + 1);
@@ -336,11 +336,11 @@ const convertField = (
   field: XmlNode,
   expectedFieldNumber: number
 ): {
-  readonly field?: DatevLiteFieldContract;
-  readonly rule?: DatevLiteFieldRuleContract;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly field?: DatevFieldContract;
+  readonly rule?: DatevFieldRuleContract;
+  readonly diagnostics: readonly DatevDiagnostic[];
 } => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+  const diagnostics: DatevDiagnostic[] = [];
   const fieldNumber = parsePositiveInteger(
     field.attributes.number,
     "XML_CONTRACT_FIELD_NUMBER",
@@ -435,7 +435,7 @@ const isDatevMarker = (value: string): value is DatevMarker =>
 const requireAttribute = (
   node: XmlNode,
   attributeName: string,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): string | undefined => {
   const value = node.attributes[attributeName]?.trim();
   if (!value) {
@@ -454,7 +454,7 @@ const requireAttribute = (
 
 const requireRecognitionCode = (
   value: string | undefined,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): string | undefined => {
   if (!value) {
     diagnostics.push(
@@ -472,7 +472,7 @@ const requireRecognitionCode = (
 
 const requireFieldType = (
   value: string | undefined,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): DatevFormatType | undefined => {
   if (!value || !SUPPORTED_FIELD_TYPES.has(value as DatevFormatType)) {
     diagnostics.push(
@@ -489,7 +489,7 @@ const requireFieldType = (
 
 const requireFormatExpression = (
   value: string,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): "" | "TTMM" | "TTMMJJJJ" | undefined => {
   if (!SUPPORTED_FORMAT_EXPRESSIONS.has(value)) {
     diagnostics.push(
@@ -506,7 +506,7 @@ const requireFormatExpression = (
 
 const parseBoolean = (
   value: string | undefined,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): boolean | undefined => {
   if (value === "true") return true;
   if (value === "false") return false;
@@ -524,7 +524,7 @@ const parsePositiveInteger = (
   value: string | undefined,
   code: string,
   message: string,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): number | undefined => {
   const parsed = parseNonNegativeInteger(value, code, message, diagnostics);
   if (parsed === undefined) return undefined;
@@ -539,7 +539,7 @@ const parseNonNegativeInteger = (
   value: string | undefined,
   code: string,
   message: string,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): number | undefined => {
   if (!value || !/^[0-9]+$/.test(value)) {
     diagnostics.push(diagnostic("error", code, message));

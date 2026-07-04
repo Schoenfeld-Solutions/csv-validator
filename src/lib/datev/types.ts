@@ -1,5 +1,5 @@
 export type DatevMarker = "EXTF" | "DTVF";
-export type DatevLiteStatus = "valid" | "invalid" | "unsupported";
+export type DatevValidationStatus = "valid" | "invalid" | "unsupported";
 export type DiagnosticSeverity = "error" | "warning";
 export type CsvEncoding = "utf-8-sig" | "utf-8" | "windows-1252" | "unknown";
 export type DatevFormatType = "Text" | "Konto" | "Zahl" | "Betrag" | "Datum";
@@ -18,7 +18,7 @@ export type DatevRecognitionCode =
   | "datev-natural-stack-v2"
   | "datev-text-key-v2";
 
-export interface DatevLiteRecognitionContract {
+export interface DatevRecognitionContract {
   readonly recognitionCode: string;
   readonly formatCategory: string;
   readonly formatName: string;
@@ -28,12 +28,12 @@ export interface DatevLiteRecognitionContract {
   readonly dataKind: string;
 }
 
-export interface DatevLiteFieldContract {
+export interface DatevFieldContract {
   readonly fieldNumber: number;
   readonly caption: string;
 }
 
-export interface DatevLiteFieldRuleContract {
+export interface DatevFieldRuleContract {
   readonly fieldNumber: number;
   readonly formatType: DatevFormatType;
   readonly maxLength: number;
@@ -53,18 +53,18 @@ export interface DatevEditableFieldContractDraft {
 }
 
 export interface DatevEditableContractDraft {
-  readonly recognition: DatevLiteRecognitionContract;
+  readonly recognition: DatevRecognitionContract;
   readonly fields: readonly DatevEditableFieldContractDraft[];
 }
 
-export interface DatevLiteContract {
+export interface DatevStructuralContract {
   readonly schemaVersion: 1;
-  readonly recognitions: readonly DatevLiteRecognitionContract[];
+  readonly recognitions: readonly DatevRecognitionContract[];
   readonly fieldsByCode: Readonly<
-    Record<DatevRecognitionCode, readonly DatevLiteFieldContract[]>
+    Record<DatevRecognitionCode, readonly DatevFieldContract[]>
   >;
   readonly rulesByCode: Readonly<
-    Record<DatevRecognitionCode, readonly DatevLiteFieldRuleContract[]>
+    Record<DatevRecognitionCode, readonly DatevFieldRuleContract[]>
   >;
 }
 
@@ -81,21 +81,19 @@ export interface DatevContractSourceSummary {
 
 export interface DatevContractRepository {
   readonly summary: DatevContractSourceSummary;
-  listRecognitions(): readonly DatevLiteRecognitionContract[];
+  listRecognitions(): readonly DatevRecognitionContract[];
   findRecognitionBySignature(
     category: string,
     name: string,
     version: string
-  ): DatevLiteRecognitionContract | undefined;
-  getFields(
-    recognitionCode: string
-  ): readonly DatevLiteFieldContract[] | undefined;
+  ): DatevRecognitionContract | undefined;
+  getFields(recognitionCode: string): readonly DatevFieldContract[] | undefined;
   getRules(
     recognitionCode: string
-  ): readonly DatevLiteFieldRuleContract[] | undefined;
+  ): readonly DatevFieldRuleContract[] | undefined;
 }
 
-export interface DatevLiteDiagnostic {
+export interface DatevDiagnostic {
   readonly severity: DiagnosticSeverity;
   readonly code: string;
   readonly message: string;
@@ -105,9 +103,9 @@ export interface DatevLiteDiagnostic {
   readonly fieldName?: string;
 }
 
-export interface DatevLiteValidationResult {
+export interface DatevValidationResult {
   readonly schemaVersion: 1;
-  readonly status: DatevLiteStatus;
+  readonly status: DatevValidationStatus;
   readonly source: {
     readonly name: string;
     readonly sizeBytes: number;
@@ -133,7 +131,7 @@ export interface DatevLiteValidationResult {
     readonly errorCount: number;
     readonly warningCount: number;
   };
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 }
 
 export interface ParsedCsvField {
@@ -146,7 +144,7 @@ export interface ParsedCsvField {
 export interface ParsedCsv {
   readonly rows: readonly (readonly ParsedCsvField[])[];
   readonly physicalLineCount: number;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 }
 
 export type DatevDataPreviewUnavailableReason =
@@ -206,12 +204,12 @@ export interface WorkerContractLoadResponse {
   readonly type: "contracts";
   readonly summary?: DatevContractSourceSummary;
   readonly mixedSummary?: DatevContractSourceSummary;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 }
 
 export interface WorkerResultResponse {
   readonly type: "result";
-  readonly result: DatevLiteValidationResult;
+  readonly result: DatevValidationResult;
   readonly preview?: DatevDataPreview;
   readonly contractSource?: DatevContractSourceSummary;
 }
@@ -220,7 +218,7 @@ export interface WorkerEditableContractResponse {
   readonly type: "editable-contract";
   readonly draft?: DatevEditableContractDraft;
   readonly summary?: DatevContractSourceSummary;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 }
 
 export type WorkerValidationResponse =

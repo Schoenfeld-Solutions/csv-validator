@@ -19,7 +19,7 @@ import type {
   DatevActiveContractSourceKind,
   DatevContractRepository,
   DatevEditableContractDraft,
-  DatevLiteDiagnostic,
+  DatevDiagnostic,
   WorkerValidationRequest,
   WorkerValidationResponse,
 } from "../lib/datev/types";
@@ -117,7 +117,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   }
 
   let totalBytes = 0;
-  const sizeDiagnostics: DatevLiteDiagnostic[] = [];
+  const sizeDiagnostics: DatevDiagnostic[] = [];
   for (const file of files) {
     if (!isXmlContractFileName(file.name)) {
       sizeDiagnostics.push(
@@ -159,7 +159,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
 
   post({ message: "Reading local DATEV XML contracts", type: "progress" });
   const xmlContents: string[] = [];
-  const diagnostics: DatevLiteDiagnostic[] = [];
+  const diagnostics: DatevDiagnostic[] = [];
   for (const file of files) {
     try {
       const decoded = detectAndDecodeBytes(
