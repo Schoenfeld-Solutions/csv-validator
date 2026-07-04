@@ -19,7 +19,7 @@ export type DatevRecognitionCode =
   | "datev-text-key-v2";
 
 export interface DatevLiteRecognitionContract {
-  readonly recognitionCode: DatevRecognitionCode;
+  readonly recognitionCode: string;
   readonly formatCategory: string;
   readonly formatName: string;
   readonly formatVersion: string;
@@ -73,10 +73,10 @@ export interface DatevContractRepository {
     version: string
   ): DatevLiteRecognitionContract | undefined;
   getFields(
-    recognitionCode: DatevRecognitionCode
+    recognitionCode: string
   ): readonly DatevLiteFieldContract[] | undefined;
   getRules(
-    recognitionCode: DatevRecognitionCode
+    recognitionCode: string
   ): readonly DatevLiteFieldRuleContract[] | undefined;
 }
 
@@ -99,7 +99,7 @@ export interface DatevLiteValidationResult {
     readonly processedInBrowser: true;
   };
   readonly format?: {
-    readonly recognitionCode: DatevRecognitionCode;
+    readonly recognitionCode: string;
     readonly marker: DatevMarker;
     readonly category: string;
     readonly name: string;

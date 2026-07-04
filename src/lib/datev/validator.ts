@@ -10,7 +10,6 @@ import type {
   DatevLiteRecognitionContract,
   DatevLiteValidationResult,
   DatevMarker,
-  DatevRecognitionCode,
   ParsedCsvField,
 } from "./types";
 
@@ -602,7 +601,7 @@ const validateDataRow = (
   row: readonly ParsedCsvField[],
   fields: readonly DatevLiteFieldContract[],
   rules: readonly DatevLiteFieldRuleContract[],
-  recognitionCode: DatevRecognitionCode,
+  recognitionCode: string,
   line: number
 ): DatevLiteDiagnostic[] => {
   const diagnostics: DatevLiteDiagnostic[] = [];
@@ -632,7 +631,7 @@ const validateCell = (
   cell: ParsedCsvField,
   field: DatevLiteFieldContract,
   rule: DatevLiteFieldRuleContract,
-  recognitionCode: DatevRecognitionCode,
+  recognitionCode: string,
   line: number
 ): DatevLiteDiagnostic[] => {
   const diagnostics: DatevLiteDiagnostic[] = [];
@@ -861,7 +860,7 @@ const validatePaymentTermsPercent = (
 };
 
 const getNumericRuntimeRule = (
-  recognitionCode: DatevRecognitionCode,
+  recognitionCode: string,
   fieldNumber: number
 ): NumericRuntimeRule | undefined => {
   const key = `${recognitionCode}:${fieldNumber}`;

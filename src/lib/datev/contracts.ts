@@ -21,13 +21,13 @@ export const BUILT_IN_CONTRACT_REPOSITORY: DatevContractRepository = {
         recognition.formatVersion === version
     ),
   getFields: (
-    recognitionCode: DatevRecognitionCode
+    recognitionCode: string
   ): readonly DatevLiteFieldContract[] | undefined =>
-    DATEV_LITE_CONTRACT.fieldsByCode[recognitionCode],
+    DATEV_LITE_CONTRACT.fieldsByCode[recognitionCode as DatevRecognitionCode],
   getRules: (
-    recognitionCode: DatevRecognitionCode
+    recognitionCode: string
   ): readonly DatevLiteFieldRuleContract[] | undefined =>
-    DATEV_LITE_CONTRACT.rulesByCode[recognitionCode],
+    DATEV_LITE_CONTRACT.rulesByCode[recognitionCode as DatevRecognitionCode],
   listRecognitions: (): readonly DatevLiteRecognitionContract[] =>
     DATEV_LITE_CONTRACT.recognitions,
   summary: {
@@ -43,12 +43,12 @@ export const SUPPORTED_FORMATS =
   BUILT_IN_CONTRACT_REPOSITORY.listRecognitions();
 
 export const getFields = (
-  recognitionCode: DatevRecognitionCode
+  recognitionCode: string
 ): readonly DatevLiteFieldContract[] =>
   BUILT_IN_CONTRACT_REPOSITORY.getFields(recognitionCode) ?? [];
 
 export const getRules = (
-  recognitionCode: DatevRecognitionCode
+  recognitionCode: string
 ): readonly DatevLiteFieldRuleContract[] =>
   BUILT_IN_CONTRACT_REPOSITORY.getRules(recognitionCode) ?? [];
 
