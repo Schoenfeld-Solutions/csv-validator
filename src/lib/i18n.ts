@@ -107,6 +107,42 @@ export const appCopy = {
       rows: "Zeilen",
       dataRows: "Datenzeilen",
       fields: "Felder",
+      contractSource: "Vertragsquelle",
+    },
+    contractSource: {
+      kicker: "Erweiterter lokaler Vertrag",
+      copy: "Optional: DATEV-Format-XML-Dateien lokal laden und die nächste CSV/TXT-Datei gegen diese Sitzungsversion prüfen. Es findet kein Upload statt.",
+      upload: "XML-Vertrag laden",
+      selectLabel: "Aktive Quelle",
+      builtInOption: "Eingebaute Verträge",
+      uploadedUnavailable: "Geladene XML-Verträge nicht verfügbar",
+      uploadedOption: (count: number) =>
+        `${count} geladene XML-Verträge verwenden`,
+      defaultStatus:
+        "Standard: eingebaute lokale Strukturverträge werden verwendet.",
+      loading: (count: number) =>
+        `${count} XML-Datei${count === 1 ? "" : "en"} wird/werden lokal geladen...`,
+      loaded: (count: number, warnings: number) =>
+        `${count} XML-Vertrag${count === 1 ? "" : "e"} lokal geladen${
+          warnings > 0
+            ? `, ${warnings} Warnung${warnings === 1 ? "" : "en"}`
+            : ""
+        }.`,
+      rejected: (codes: string) =>
+        `XML-Verträge wurden nicht übernommen: ${codes}.`,
+      builtInSummary: "Eingebaute lokale Verträge",
+      uploadedSummary: (count: number) => `Geladene XML-Verträge (${count})`,
+      summaryDetails: (overrides: number, warnings: number) =>
+        [
+          overrides > 0
+            ? `${overrides} Override${overrides === 1 ? "" : "s"}`
+            : undefined,
+          warnings > 0
+            ? `${warnings} Warnung${warnings === 1 ? "" : "en"}`
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(", "),
     },
     actions: {
       copy: "JSON-Ergebnis kopieren",
@@ -188,7 +224,7 @@ export const appCopy = {
         privacy:
           "Kein Upload, kein Serverempfang, keine Telemetrie und keine Analytics.",
         contract:
-          "Genutzter lokaler Strukturvertrag: eingebauter Vertrag oder keiner.",
+          "Genutzter lokaler Strukturvertrag: eingebauter Vertrag, geladener XML-Vertrag oder keiner.",
         recognition:
           "Erkannte DATEV-Signatur, Formatname, Kategorie und Version.",
         encodingCsv:
@@ -228,7 +264,9 @@ export const appCopy = {
       },
       contractSource: {
         "built-in": "Eingebauter lokaler Vertrag",
+        "edited-session": "Bearbeiteter Sitzungsvertrag",
         none: "Kein unterstützter lokaler Vertrag",
+        uploaded: "Geladener XML-Vertrag",
       },
     },
     diagnostics: {
@@ -280,6 +318,40 @@ export const appCopy = {
       rows: "Rows",
       dataRows: "Data rows",
       fields: "Fields",
+      contractSource: "Contract source",
+    },
+    contractSource: {
+      kicker: "Advanced local contract",
+      copy: "Optional: load DATEV format XML files locally and validate the next CSV/TXT file against that session source. No upload takes place.",
+      upload: "Load XML contract",
+      selectLabel: "Active source",
+      builtInOption: "Built-in contracts",
+      uploadedUnavailable: "Loaded XML contracts unavailable",
+      uploadedOption: (count: number) =>
+        `Use ${count} loaded XML contract${count === 1 ? "" : "s"}`,
+      defaultStatus: "Default: built-in local structural contracts are used.",
+      loading: (count: number) =>
+        `Loading ${count} XML file${count === 1 ? "" : "s"} locally...`,
+      loaded: (count: number, warnings: number) =>
+        `${count} XML contract${count === 1 ? "" : "s"} loaded locally${
+          warnings > 0
+            ? `, ${warnings} warning${warnings === 1 ? "" : "s"}`
+            : ""
+        }.`,
+      rejected: (codes: string) => `XML contracts were not applied: ${codes}.`,
+      builtInSummary: "Built-in local contracts",
+      uploadedSummary: (count: number) => `Loaded XML contracts (${count})`,
+      summaryDetails: (overrides: number, warnings: number) =>
+        [
+          overrides > 0
+            ? `${overrides} override${overrides === 1 ? "" : "s"}`
+            : undefined,
+          warnings > 0
+            ? `${warnings} warning${warnings === 1 ? "" : "s"}`
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(", "),
     },
     actions: {
       copy: "Copy JSON result",
@@ -358,7 +430,7 @@ export const appCopy = {
           "File name, file size and processing exclusively in the browser.",
         privacy: "No upload, no server receipt, no telemetry and no analytics.",
         contract:
-          "Applied local structural contract: built-in contract or none.",
+          "Applied local structural contract: built-in contract, loaded XML contract, or none.",
         recognition:
           "Recognized DATEV signature, format name, category and version.",
         encodingCsv:
@@ -397,7 +469,9 @@ export const appCopy = {
       },
       contractSource: {
         "built-in": "Built-in local contract",
+        "edited-session": "Edited session contract",
         none: "No supported local contract",
+        uploaded: "Loaded XML contract",
       },
     },
     diagnostics: {

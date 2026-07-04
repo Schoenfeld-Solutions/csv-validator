@@ -1,4 +1,6 @@
 import type {
+  DatevContractSourceKind,
+  DatevContractSourceSummary,
   DatevLiteDiagnostic,
   DatevLiteStatus,
   DatevLiteValidationResult,
@@ -51,7 +53,8 @@ export interface DatevValidationReport {
   readonly schemaVersion: 1;
   readonly generatedAt: string;
   readonly status: DatevLiteStatus;
-  readonly contractSource: "built-in" | "none";
+  readonly contractSource: DatevContractSourceKind | "none";
+  readonly contractSourceSummary?: DatevContractSourceSummary;
   readonly source: DatevLiteValidationResult["source"];
   readonly format: DatevLiteValidationResult["format"];
   readonly csv: DatevLiteValidationResult["csv"];
@@ -77,11 +80,15 @@ export const reportSectionOrder: readonly ValidationReportSectionId[] = [
 
 export const buildValidationReport = (
   result: DatevLiteValidationResult,
-  generatedAt = new Date().toISOString()
+  generatedAt = new Date().toISOString(),
+  contractSource?: DatevContractSourceSummary
 ): DatevValidationReport => {
   const diagnostics = result.diagnostics.map(toReportDiagnostic);
   return {
-    contractSource: result.format ? "built-in" : "none",
+    contractSource: result.format
+      ? (contractSource?.kind ?? "built-in")
+      : "none",
+    contractSourceSummary: contractSource,
     csv: result.csv,
     format: result.format,
     generatedAt,
@@ -164,6 +171,9 @@ const getRecommendedActions = (
 
 const getDiagnosticSection = (code: string): ValidationReportSectionId => {
   if (code.startsWith("FILE_")) return "source";
+  if (code.startsWith("CONTRACT_SOURCE_") || code.startsWith("XML_CONTRACT_")) {
+    return "contract";
+  }
   if (code.startsWith("ENCODING_") || code.startsWith("CSV_")) {
     return "encodingCsv";
   }

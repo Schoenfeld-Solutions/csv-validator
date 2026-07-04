@@ -9,6 +9,10 @@ That HTML report is a user-facing rendering artifact, not a replacement for
 the machine-readable result schema below. It must not include raw CSV/TXT data
 values.
 
+The browser worker may also use a session-local uploaded DATEV format XML
+contract source. Contract-source labels and counts are UI/report metadata and
+are intentionally outside this stable JSON result schema.
+
 The browser worker may also return a session-local data preview payload for
 the current UI session. That preview is intentionally outside this JSON result
 schema and outside generated reports because it can contain raw CSV/TXT values.

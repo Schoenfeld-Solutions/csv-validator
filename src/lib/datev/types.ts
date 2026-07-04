@@ -161,9 +161,30 @@ export interface DatevDataPreview {
   readonly rows: readonly DatevPreviewRow[];
 }
 
-export interface WorkerValidationRequest {
-  readonly type: "validate";
-  readonly file: File;
+export type DatevActiveContractSourceKind = "built-in" | "uploaded";
+
+export type WorkerValidationRequest =
+  | {
+      readonly type: "validate";
+      readonly file: File;
+      readonly contractSource?: DatevActiveContractSourceKind;
+    }
+  | {
+      readonly type: "load-contracts";
+      readonly files: readonly File[];
+    };
+
+export interface WorkerContractLoadResponse {
+  readonly type: "contracts";
+  readonly summary?: DatevContractSourceSummary;
+  readonly diagnostics: readonly DatevLiteDiagnostic[];
+}
+
+export interface WorkerResultResponse {
+  readonly type: "result";
+  readonly result: DatevLiteValidationResult;
+  readonly preview?: DatevDataPreview;
+  readonly contractSource?: DatevContractSourceSummary;
 }
 
 export type WorkerValidationResponse =
@@ -171,8 +192,5 @@ export type WorkerValidationResponse =
       readonly type: "progress";
       readonly message: string;
     }
-  | {
-      readonly type: "result";
-      readonly result: DatevLiteValidationResult;
-      readonly preview?: DatevDataPreview;
-    };
+  | WorkerContractLoadResponse
+  | WorkerResultResponse;

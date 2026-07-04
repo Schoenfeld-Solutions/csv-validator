@@ -52,6 +52,47 @@ const copy = appCopy[locale];
       accept=".csv,.txt,text/csv,text/plain"
     />
 
+    <section
+      class="contract-source-panel"
+      aria-labelledby="contractSourceTitle"
+    >
+      <div>
+        <p class="section-kicker" id="contractSourceTitle">
+          {copy.contractSource.kicker}
+        </p>
+        <p class="contract-source-copy">{copy.contractSource.copy}</p>
+      </div>
+      <div class="contract-source-controls">
+        <label class="secondary-action" for="xmlContractInput">
+          {copy.contractSource.upload}
+        </label>
+        <input
+          class="visually-hidden"
+          id="xmlContractInput"
+          type="file"
+          accept=".xml,text/xml,application/xml"
+          multiple
+        />
+        <label class="contract-source-select-label" for="contractSourceSelect">
+          {copy.contractSource.selectLabel}
+        </label>
+        <select id="contractSourceSelect" class="contract-source-select">
+          <option value="built-in">{copy.contractSource.builtInOption}</option>
+          <option value="uploaded" disabled>
+            {copy.contractSource.uploadedUnavailable}
+          </option>
+        </select>
+      </div>
+      <p
+        class="contract-source-status"
+        id="xmlContractStatus"
+        role="status"
+        aria-live="polite"
+      >
+        {copy.contractSource.defaultStatus}
+      </p>
+    </section>
+
     <div class="status-line" id="statusLine" role="status" aria-live="polite">
       {copy.waiting}
     </div>
@@ -134,6 +175,10 @@ const copy = appCopy[locale];
           <div>
             <dt>{copy.metadata.fields}</dt>
             <dd id="metaFields">-</dd>
+          </div>
+          <div>
+            <dt>{copy.metadata.contractSource}</dt>
+            <dd id="metaContractSource">-</dd>
           </div>
         </dl>
 
