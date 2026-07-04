@@ -719,6 +719,54 @@ test("rejects oversized XML contracts before interpretation", async ({
   await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
 });
 
+test("rejects XML contract count and set size limits before interpretation", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles(
+    Array.from({ length: 21 }, (_, index) => ({
+      buffer: Buffer.from(
+        validCustomContractXml({
+          formatCategory: String(900 + index),
+          formatName: `secret-count-limit-format-${index}`,
+          recognitionCode: `secret-count-limit-v${index}`,
+        }),
+        "utf8"
+      ),
+      mimeType: "application/xml",
+      name: `contract-${index}.xml`,
+    }))
+  );
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_FILE_LIMIT"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(
+    "secret-count-limit-format"
+  );
+
+  await page.locator("#xmlContractInput").setInputFiles(
+    Array.from({ length: 11 }, (_, index) => ({
+      buffer: Buffer.concat([
+        Buffer.from(`secret-total-limit-format-${index}`),
+        Buffer.alloc(1024 * 1024, "x"),
+      ]),
+      mimeType: "application/xml",
+      name: `total-limit-${index}.xml`,
+    }))
+  );
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_SET_TOO_LARGE"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(
+    "secret-total-limit-format"
+  );
+});
+
 test("rejects non-XML contract filenames before interpretation", async ({
   page,
 }) => {
