@@ -10,10 +10,10 @@ Before every PR update and before every merge:
 ```bash
 npm run preflight
 git diff --check
-git ls-files .local
+git ls-files .local docs/plans
 ```
 
-`git ls-files .local` must stay empty.
+`git ls-files .local docs/plans` must stay empty.
 
 ## Pull Request Gates
 
