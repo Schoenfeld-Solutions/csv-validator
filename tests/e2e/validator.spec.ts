@@ -530,6 +530,26 @@ test("rejects oversized XML contracts before interpretation", async ({
   await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
 });
 
+test("rejects non-XML contract filenames before interpretation", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "text/plain",
+    name: "not-a-contract.txt",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_FILE_TYPE_UNSUPPORTED"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(
+    "datev-format-contracts"
+  );
+});
+
 test("shows a warning when mixed XML contracts override built-in signatures", async ({
   page,
 }) => {
