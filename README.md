@@ -30,6 +30,8 @@ implemented DATEV CSV structural contract:
   optional full-date fields.
 - Browser-side fail-closed rejection for files larger than the documented
   10 MiB processing limit.
+- Browser-side fail-closed rejection for primary CSV/TXT validation files
+  without `.csv` or `.txt` file names before parsing.
 - Structured local report sections and JSON/HTML report export only after
   explicit user action.
 - An optional local data preview for the first parsed rows after explicit user
@@ -123,6 +125,8 @@ processing of DATEV files.
 - XML contract files are interpreted only as a constrained local structural
   contract subset; raw XML is not rendered, exported, or persisted. Files
   without a `.xml` name are rejected before parsing.
+- Primary CSV/TXT validation files without `.csv` or `.txt` names are rejected
+  before parsing.
 - Edited session-local contract copies are derived and applied only in browser
   memory. Built-in contract data is not modified.
 - Contract-source labels, counts, and override warnings are local UI/report

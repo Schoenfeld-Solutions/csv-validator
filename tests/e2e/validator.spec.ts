@@ -294,6 +294,49 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
+test("rejects unsupported primary file names before reading content", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "not-a-datev-file.json", {
+        type: "application/json",
+      })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, `{"hidden":"primary-secret-value"}`);
+
+  await expect(
+    page.getByText(
+      "Invalid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#diagnosticsBody")).toContainText(
+    "FILE_TYPE_UNSUPPORTED"
+  );
+  await expect(page.locator("body")).not.toContainText("primary-secret-value");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expect(htmlReport).toContain("FILE_TYPE_UNSUPPORTED");
+  expect(htmlReport).not.toContain("primary-secret-value");
+});
+
 test("loads synthetic XML contracts locally and validates with mixed source fallback", async ({
   page,
 }) => {
