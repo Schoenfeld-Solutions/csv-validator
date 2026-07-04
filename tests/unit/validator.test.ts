@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BUILT_IN_CONTRACT_REPOSITORY,
   getFields,
   getRules,
   SUPPORTED_FORMATS,
 } from "../../src/lib/datev/contracts";
 import { diagnostic } from "../../src/lib/datev/diagnostics";
+import type { DatevContractRepository } from "../../src/lib/datev/types";
 import { validateDatevContent } from "../../src/lib/datev/validator";
 import {
   bookingBatchHeaderLine,
@@ -123,6 +125,94 @@ describe("validateDatevContent", () => {
         formatType: "Betrag",
       });
     }
+  });
+
+  it("exposes built-in contract facts through the repository interface", () => {
+    expect(BUILT_IN_CONTRACT_REPOSITORY.summary).toMatchObject({
+      contractCount: 12,
+      kind: "built-in",
+      overrideCount: 0,
+      warningCount: 0,
+    });
+    expect(BUILT_IN_CONTRACT_REPOSITORY.listRecognitions()).toEqual(
+      SUPPORTED_FORMATS
+    );
+    expect(
+      BUILT_IN_CONTRACT_REPOSITORY.findRecognitionBySignature(
+        "20",
+        "Kontenbeschriftungen",
+        "3"
+      )
+    ).toMatchObject({
+      recognitionCode: "datev-gl-account-description-v3",
+    });
+    expect(
+      BUILT_IN_CONTRACT_REPOSITORY.getFields("datev-gl-account-description-v3")
+    ).toEqual(getFields("datev-gl-account-description-v3"));
+    expect(
+      BUILT_IN_CONTRACT_REPOSITORY.getRules("datev-gl-account-description-v3")
+    ).toEqual(getRules("datev-gl-account-description-v3"));
+  });
+
+  it("keeps validation unchanged when the built-in repository is passed explicitly", () => {
+    const content = validGlAccountDescriptionCsv();
+    const explicitRepositoryResult = validateDatevContent({
+      content,
+      contractRepository: BUILT_IN_CONTRACT_REPOSITORY,
+      encoding: "utf-8-sig",
+      sizeBytes: content.length,
+      sourceName: "/private/path/example.csv",
+    });
+
+    expect(explicitRepositoryResult).toEqual(validate(content));
+  });
+
+  it("fails closed when the selected contract repository lacks fields", () => {
+    const incompleteRepository: DatevContractRepository = {
+      ...BUILT_IN_CONTRACT_REPOSITORY,
+      getFields: (recognitionCode) =>
+        recognitionCode === "datev-gl-account-description-v3"
+          ? undefined
+          : BUILT_IN_CONTRACT_REPOSITORY.getFields(recognitionCode),
+    };
+    const content = validGlAccountDescriptionCsv();
+
+    const result = validateDatevContent({
+      content,
+      contractRepository: incompleteRepository,
+      encoding: "utf-8-sig",
+      sizeBytes: content.length,
+      sourceName: "example.csv",
+    });
+
+    expect(result.status).toBe("invalid");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "CONTRACT_SOURCE_INCOMPLETE" })
+    );
+  });
+
+  it("fails closed when the selected contract repository has mismatched field and rule counts", () => {
+    const inconsistentRepository: DatevContractRepository = {
+      ...BUILT_IN_CONTRACT_REPOSITORY,
+      getRules: (recognitionCode) =>
+        recognitionCode === "datev-gl-account-description-v3"
+          ? BUILT_IN_CONTRACT_REPOSITORY.getRules(recognitionCode)?.slice(1)
+          : BUILT_IN_CONTRACT_REPOSITORY.getRules(recognitionCode),
+    };
+    const content = validGlAccountDescriptionCsv();
+
+    const result = validateDatevContent({
+      content,
+      contractRepository: inconsistentRepository,
+      encoding: "utf-8-sig",
+      sizeBytes: content.length,
+      sourceName: "example.csv",
+    });
+
+    expect(result.status).toBe("invalid");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "CONTRACT_SOURCE_INCONSISTENT" })
+    );
   });
 
   it("warns for non-empty unquoted text fields without leaking values", () => {

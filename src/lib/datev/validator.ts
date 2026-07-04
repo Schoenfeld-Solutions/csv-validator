@@ -1,13 +1,9 @@
-import {
-  findRecognitionBySignature,
-  getFields,
-  getRules,
-  isAllowedMarker,
-} from "./contracts";
+import { BUILT_IN_CONTRACT_REPOSITORY, isAllowedMarker } from "./contracts";
 import { parseDatevCsvContent } from "./csv";
 import { diagnostic, summarizeDiagnostics } from "./diagnostics";
 import type {
   CsvEncoding,
+  DatevContractRepository,
   DatevLiteDiagnostic,
   DatevLiteFieldContract,
   DatevLiteFieldRuleContract,
@@ -59,11 +55,13 @@ export interface ValidateDatevContentInput {
   readonly sizeBytes: number;
   readonly content: string;
   readonly encoding: CsvEncoding;
+  readonly contractRepository?: DatevContractRepository;
   readonly preflightDiagnostics?: readonly DatevLiteDiagnostic[];
 }
 
 export const validateDatevContent = ({
   content,
+  contractRepository = BUILT_IN_CONTRACT_REPOSITORY,
   encoding,
   preflightDiagnostics = [],
   sizeBytes,
@@ -97,50 +95,70 @@ export const validateDatevContent = ({
   } else {
     const headerValues = values(header);
     marker = parseMarker(headerValues[0]);
-    recognition = detectRecognition(headerValues);
+    recognition = detectRecognition(headerValues, contractRepository);
     diagnostics.push(...validateHeader(header, recognition, marker));
   }
 
   if (recognition) {
-    const fields = getFields(recognition.recognitionCode);
-    const rules = getRules(recognition.recognitionCode);
-    fieldCount = fields.length;
-    if (!captions) {
+    const fields = contractRepository.getFields(recognition.recognitionCode);
+    const rules = contractRepository.getRules(recognition.recognitionCode);
+    if (!fields || !rules) {
       diagnostics.push(
         diagnostic(
           "error",
-          "CAPTIONS_MISSING",
-          "A DATEV CSV file must contain a caption row after the header.",
-          { line: 2 }
+          "CONTRACT_SOURCE_INCOMPLETE",
+          "The selected local DATEV CSV contract source is incomplete.",
+          { line: 1 }
+        )
+      );
+    } else if (fields.length !== rules.length) {
+      diagnostics.push(
+        diagnostic(
+          "error",
+          "CONTRACT_SOURCE_INCONSISTENT",
+          "The selected local DATEV CSV contract source has inconsistent field and rule counts.",
+          { line: 1 }
         )
       );
     } else {
-      diagnostics.push(...validateCaptions(captions, fields, recognition));
-    }
-    const dataRows = rows.slice(2);
-    for (const [offset, row] of dataRows.entries()) {
-      const line = offset + 3;
-      if (!row.some((field) => field.value !== "")) {
+      fieldCount = fields.length;
+      if (!captions) {
         diagnostics.push(
           diagnostic(
             "error",
-            "DATA_ROW_EMPTY",
-            "Data rows must not be empty.",
-            { line }
+            "CAPTIONS_MISSING",
+            "A DATEV CSV file must contain a caption row after the header.",
+            { line: 2 }
           )
         );
-        continue;
+      } else {
+        diagnostics.push(...validateCaptions(captions, fields, recognition));
       }
-      dataRecordCount += 1;
-      diagnostics.push(
-        ...validateDataRow(
-          row,
-          fields,
-          rules,
-          recognition.recognitionCode,
-          line
-        )
-      );
+      const dataRows = rows.slice(2);
+      for (const [offset, row] of dataRows.entries()) {
+        const line = offset + 3;
+        if (!row.some((field) => field.value !== "")) {
+          diagnostics.push(
+            diagnostic(
+              "error",
+              "DATA_ROW_EMPTY",
+              "Data rows must not be empty.",
+              { line }
+            )
+          );
+          continue;
+        }
+        dataRecordCount += 1;
+        diagnostics.push(
+          ...validateDataRow(
+            row,
+            fields,
+            rules,
+            recognition.recognitionCode,
+            line
+          )
+        );
+      }
     }
   } else if (header && parsed.diagnostics.length === 0) {
     const values = rows[0] ? rows[0].map((field) => field.value) : [];
@@ -245,9 +263,10 @@ const parseMarker = (value: string | undefined): DatevMarker | undefined =>
   value === "EXTF" || value === "DTVF" ? value : undefined;
 
 const detectRecognition = (
-  headerValues: readonly string[]
+  headerValues: readonly string[],
+  contractRepository: DatevContractRepository
 ): DatevLiteRecognitionContract | undefined =>
-  findRecognitionBySignature(
+  contractRepository.findRecognitionBySignature(
     headerValues[HEADER_CATEGORY_INDEX] ?? "",
     headerValues[HEADER_NAME_INDEX] ?? "",
     headerValues[HEADER_FORMAT_VERSION_INDEX] ?? ""
