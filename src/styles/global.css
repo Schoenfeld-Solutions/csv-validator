@@ -419,6 +419,59 @@ main {
   padding: 9px 10px;
 }
 
+.contract-editor-panel {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.contract-editor-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.contract-editor-heading h2 {
+  font-size: 1rem;
+  margin: 2px 0 0;
+}
+
+.contract-editor-required-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.contract-editor-required-input,
+.contract-editor-table input,
+.contract-editor-table select {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  min-height: 36px;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.contract-editor-table-wrap {
+  max-height: 55vh;
+  overflow: auto;
+}
+
+.contract-editor-table {
+  min-width: 980px;
+}
+
+.contract-editor-table input[type="checkbox"] {
+  min-height: 18px;
+  width: 18px;
+}
+
 .trust-block {
   color: var(--muted);
   display: grid;

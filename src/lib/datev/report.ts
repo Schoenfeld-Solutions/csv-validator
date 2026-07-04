@@ -171,7 +171,11 @@ const getRecommendedActions = (
 
 const getDiagnosticSection = (code: string): ValidationReportSectionId => {
   if (code.startsWith("FILE_")) return "source";
-  if (code.startsWith("CONTRACT_SOURCE_") || code.startsWith("XML_CONTRACT_")) {
+  if (
+    code.startsWith("CONTRACT_SOURCE_") ||
+    code.startsWith("XML_CONTRACT_") ||
+    code.startsWith("EDIT_CONTRACT_")
+  ) {
     return "contract";
   }
   if (code.startsWith("ENCODING_") || code.startsWith("CSV_")) {

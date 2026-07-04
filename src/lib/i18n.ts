@@ -117,6 +117,8 @@ export const appCopy = {
       builtInOption: "Eingebaute Verträge",
       uploadedUnavailable: "Geladene XML-Verträge nicht verfügbar",
       mixedUnavailable: "Eingebaute plus XML-Verträge nicht verfügbar",
+      editedUnavailable: "Bearbeiteter Sitzungsvertrag nicht verfügbar",
+      editedOption: "Bearbeiteten Sitzungsvertrag verwenden",
       uploadedOption: (count: number) =>
         `${count} geladene XML-Verträge verwenden`,
       mixedOption: (count: number, overrides: number) =>
@@ -141,11 +143,15 @@ export const appCopy = {
       uploadedSummary: (count: number) => `Geladene XML-Verträge (${count})`,
       mixedSummary: (count: number) =>
         `Eingebaute plus geladene XML-Verträge (${count})`,
+      editedSummary: "Bearbeiteter Sitzungsvertrag",
       overrideWarningLabel: "Override-Warnung",
       overrideWarning: (count: number) =>
         `${count} geladene XML-Vertragssignatur${
           count === 1 ? "" : "en"
         } überschreibt eingebaute lokale Vertragsdaten für diese Sitzung.`,
+      editedWarningLabel: "Sitzungsbearbeitung",
+      editedWarning:
+        "Ein lokal bearbeiteter Sitzungsvertrag ist aktiv. Die eingebauten Standardverträge bleiben unverändert.",
       summaryDetails: (overrides: number, warnings: number) =>
         [
           overrides > 0
@@ -157,6 +163,32 @@ export const appCopy = {
         ]
           .filter(Boolean)
           .join(", "),
+    },
+    contractEditor: {
+      kicker: "Sitzungsbearbeitung",
+      title: "Lokale Vertragskopie bearbeiten",
+      create: "Bearbeitbare Kopie erstellen",
+      discard: "Bearbeitung verwerfen",
+      apply: "Sitzungsbearbeitung anwenden",
+      requiredCaptions: "Erforderliche Caption-Anker, durch Komma getrennt",
+      fieldNumber: "Nr.",
+      caption: "Caption",
+      type: "Typ",
+      maxLength: "Max. Länge",
+      decimalPlaces: "Dezimalstellen",
+      required: "Pflicht",
+      expression: "Ausdruck",
+      emptyExpression: "Kein Ausdruck",
+      loading: "Lokale Vertragskopie wird erstellt...",
+      loaded:
+        "Bearbeitbare lokale Kopie erstellt. Änderungen gelten erst nach dem Anwenden und nur für diese Browser-Sitzung.",
+      applying: "Bearbeiteter Sitzungsvertrag wird geprüft...",
+      applied: "Bearbeiteter Sitzungsvertrag ist für diese Sitzung aktiv.",
+      discarding: "Bearbeiteter Sitzungsvertrag wird verworfen...",
+      discarded:
+        "Bearbeiteter Sitzungsvertrag wurde verworfen; eingebaute Verträge sind wieder aktiv.",
+      rejected: (codes: string) =>
+        `Bearbeiteter Sitzungsvertrag wurde nicht übernommen: ${codes}.`,
     },
     actions: {
       copy: "JSON-Ergebnis kopieren",
@@ -238,7 +270,7 @@ export const appCopy = {
         privacy:
           "Kein Upload, kein Serverempfang, keine Telemetrie und keine Analytics.",
         contract:
-          "Genutzter lokaler Strukturvertrag: eingebauter Vertrag, geladener XML-Vertrag oder keiner.",
+          "Genutzter lokaler Strukturvertrag: eingebauter Vertrag, geladener XML-Vertrag, bearbeiteter Sitzungsvertrag oder keiner.",
         recognition:
           "Erkannte DATEV-Signatur, Formatname, Kategorie und Version.",
         encodingCsv:
@@ -343,6 +375,8 @@ export const appCopy = {
       builtInOption: "Built-in contracts",
       uploadedUnavailable: "Loaded XML contracts unavailable",
       mixedUnavailable: "Built-in plus XML contracts unavailable",
+      editedUnavailable: "Edited session contract unavailable",
+      editedOption: "Use edited session contract",
       uploadedOption: (count: number) =>
         `Use ${count} loaded XML contract${count === 1 ? "" : "s"}`,
       mixedOption: (count: number, overrides: number) =>
@@ -365,11 +399,15 @@ export const appCopy = {
       uploadedSummary: (count: number) => `Loaded XML contracts (${count})`,
       mixedSummary: (count: number) =>
         `Built-in plus loaded XML contracts (${count})`,
+      editedSummary: "Edited session contract",
       overrideWarningLabel: "Override warning",
       overrideWarning: (count: number) =>
         `${count} loaded XML contract signature${
           count === 1 ? "" : "s"
         } override built-in local contract data for this session.`,
+      editedWarningLabel: "Session edit",
+      editedWarning:
+        "A locally edited session contract is active. Built-in default contracts remain unchanged.",
       summaryDetails: (overrides: number, warnings: number) =>
         [
           overrides > 0
@@ -381,6 +419,32 @@ export const appCopy = {
         ]
           .filter(Boolean)
           .join(", "),
+    },
+    contractEditor: {
+      kicker: "Session editing",
+      title: "Edit local contract copy",
+      create: "Create editable copy",
+      discard: "Discard edit",
+      apply: "Apply session edit",
+      requiredCaptions: "Required caption anchors, comma-separated",
+      fieldNumber: "No.",
+      caption: "Caption",
+      type: "Type",
+      maxLength: "Max length",
+      decimalPlaces: "Decimals",
+      required: "Required",
+      expression: "Expression",
+      emptyExpression: "No expression",
+      loading: "Creating local contract copy...",
+      loaded:
+        "Editable local copy created. Changes apply only after applying them and only for this browser session.",
+      applying: "Checking edited session contract...",
+      applied: "Edited session contract is active for this session.",
+      discarding: "Discarding edited session contract...",
+      discarded:
+        "Edited session contract was discarded; built-in contracts are active again.",
+      rejected: (codes: string) =>
+        `Edited session contract was not applied: ${codes}.`,
     },
     actions: {
       copy: "Copy JSON result",
@@ -459,7 +523,7 @@ export const appCopy = {
           "File name, file size and processing exclusively in the browser.",
         privacy: "No upload, no server receipt, no telemetry and no analytics.",
         contract:
-          "Applied local structural contract: built-in contract, loaded XML contract, or none.",
+          "Applied local structural contract: built-in contract, loaded XML contract, edited session contract, or none.",
         recognition:
           "Recognized DATEV signature, format name, category and version.",
         encodingCsv:

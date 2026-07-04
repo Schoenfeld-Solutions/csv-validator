@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   BUILT_IN_CONTRACT_REPOSITORY,
+  createEditableContractDraft,
+  createEditedSessionContractRepository,
   createMixedContractRepository,
 } from "../../src/lib/datev/contracts";
 import { importDatevXmlContractSet } from "../../src/lib/datev/custom-xml";
@@ -11,7 +13,10 @@ import {
   headerFor,
   validGlAccountDescriptionCsv,
 } from "./datev-test-fixtures";
-import type { DatevContractRepository } from "../../src/lib/datev/types";
+import type {
+  DatevContractRepository,
+  DatevEditableContractDraft,
+} from "../../src/lib/datev/types";
 
 const validCustomContractXml = (
   overrides: Partial<{
@@ -60,6 +65,13 @@ const expectRepository = (
 ): DatevContractRepository => {
   expect(repository).toBeDefined();
   return repository as DatevContractRepository;
+};
+
+const expectEditableDraft = (
+  draft: DatevEditableContractDraft | undefined
+): DatevEditableContractDraft => {
+  expect(draft).toBeDefined();
+  return draft as DatevEditableContractDraft;
 };
 
 describe("importDatevXmlContractSet", () => {
@@ -339,6 +351,80 @@ describe("importDatevXmlContractSet", () => {
         "XML_CONTRACT_FIELD_ORDER",
         "XML_CONTRACT_FIELD_TYPE_UNSUPPORTED",
         "XML_CONTRACT_FIELD_REQUIRED_FLAG",
+      ])
+    );
+  });
+
+  it("creates session-local edited contracts without mutating built-in defaults", () => {
+    const editable = createEditableContractDraft(
+      BUILT_IN_CONTRACT_REPOSITORY,
+      "datev-gl-account-description-v3"
+    );
+    expect(editable.diagnostics).toEqual([]);
+    const draft = expectEditableDraft(editable.draft);
+    const editedDraft: DatevEditableContractDraft = {
+      ...draft,
+      fields: draft.fields.map((field) =>
+        field.fieldNumber === 4 ? { ...field, maxLength: 4 } : field
+      ),
+    };
+
+    const edited = createEditedSessionContractRepository(editedDraft);
+    const editedRepository = expectRepository(edited.repository);
+    expect(edited.diagnostics).toEqual([]);
+    expect(editedRepository.summary).toMatchObject({
+      kind: "edited-session",
+      overrideCount: 1,
+      warningCount: 1,
+    });
+
+    const editedResult = validateDatevContent({
+      content: validGlAccountDescriptionCsv(),
+      contractRepository: editedRepository,
+      encoding: "utf-8",
+      sizeBytes: validGlAccountDescriptionCsv().length,
+      sourceName: "accounts.csv",
+    });
+    expect(editedResult.status).toBe("invalid");
+    expect(editedResult.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "FIELD_TEXT_MAX_LENGTH", fieldIndex: 4 })
+    );
+
+    const builtInResult = validateDatevContent({
+      content: validGlAccountDescriptionCsv(),
+      contractRepository: BUILT_IN_CONTRACT_REPOSITORY,
+      encoding: "utf-8",
+      sizeBytes: validGlAccountDescriptionCsv().length,
+      sourceName: "accounts.csv",
+    });
+    expect(builtInResult.status).toBe("valid");
+    expect(builtInResult.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "FIELD_TEXT_MAX_LENGTH", fieldIndex: 4 })
+    );
+  });
+
+  it("rejects invalid edited session contract drafts fail-closed", () => {
+    const draft = expectEditableDraft(
+      createEditableContractDraft(
+        BUILT_IN_CONTRACT_REPOSITORY,
+        "datev-gl-account-description-v3"
+      ).draft
+    );
+    const invalidDraft: DatevEditableContractDraft = {
+      ...draft,
+      fields: draft.fields.map((field, index) =>
+        index === 1 ? { ...field, fieldNumber: 1, maxLength: -1 } : field
+      ),
+    };
+
+    const edited = createEditedSessionContractRepository(invalidDraft);
+
+    expect(edited.repository).toBeUndefined();
+    expect(edited.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "EDIT_CONTRACT_FIELD_DUPLICATE" }),
+        expect.objectContaining({ code: "EDIT_CONTRACT_FIELD_ORDER" }),
+        expect.objectContaining({ code: "EDIT_CONTRACT_MAX_LENGTH" }),
       ])
     );
   });

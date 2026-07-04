@@ -428,6 +428,88 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   );
 });
 
+test("applies and discards a session-local contract edit without exposing raw values", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "editable-session.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validGlAccountDescriptionCsv());
+
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Create editable copy" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Edit local contract copy" })
+  ).toBeVisible();
+
+  await page.locator("#editableFieldMaxLength-4").fill("4");
+  await page.getByRole("button", { name: "Apply session edit" }).click();
+
+  await expect(page.locator("#contractSourceSelect")).toHaveValue(
+    "edited-session"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Edited session contract"
+  );
+  await expect(page.locator("#contractSourceWarning")).toContainText(
+    "Built-in default contracts remain unchanged"
+  );
+  await expect(
+    page.getByText(
+      "Invalid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#diagnosticsBody")).toContainText(
+    "FIELD_TEXT_MAX_LENGTH"
+  );
+  await expect(page.locator("body")).not.toContainText("Kasse lang");
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __editedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__editedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __editedJson?: string }).__editedJson ?? ""
+  );
+  expect(copiedJson).toContain("FIELD_TEXT_MAX_LENGTH");
+  expect(copiedJson).not.toContain("Kasse lang");
+
+  await page.getByRole("button", { name: "Discard edit" }).click();
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("#contractSourceWarning")).toBeHidden();
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+});
+
 test("rejects oversized XML contracts before interpretation", async ({
   page,
 }) => {

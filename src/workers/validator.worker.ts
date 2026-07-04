@@ -5,6 +5,8 @@ import {
 } from "../lib/datev/encoding";
 import {
   BUILT_IN_CONTRACT_REPOSITORY,
+  createEditableContractDraft,
+  createEditedSessionContractRepository,
   createMixedContractRepository,
 } from "../lib/datev/contracts";
 import { importDatevXmlContractSet } from "../lib/datev/custom-xml";
@@ -16,6 +18,7 @@ import { buildDatevDataPreview } from "../lib/datev/preview";
 import type {
   DatevActiveContractSourceKind,
   DatevContractRepository,
+  DatevEditableContractDraft,
   DatevLiteDiagnostic,
   WorkerValidationRequest,
   WorkerValidationResponse,
@@ -31,6 +34,7 @@ const post = (message: WorkerValidationResponse): void => {
 
 let uploadedContractRepository: DatevContractRepository | undefined;
 let mixedContractRepository: DatevContractRepository | undefined;
+let editedSessionContractRepository: DatevContractRepository | undefined;
 
 const readFileBytes = async (
   file: File,
@@ -67,7 +71,9 @@ const getContractRepository = (
     ? uploadedContractRepository
     : source === "mixed"
       ? mixedContractRepository
-      : BUILT_IN_CONTRACT_REPOSITORY;
+      : source === "edited-session"
+        ? editedSessionContractRepository
+        : BUILT_IN_CONTRACT_REPOSITORY;
 
 const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   if (files.length === 0) {
@@ -190,6 +196,54 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   });
 };
 
+const createEditableContract = (
+  recognitionCode: string,
+  source: DatevActiveContractSourceKind | undefined
+): void => {
+  const repository = getContractRepository(source);
+  if (!repository) {
+    post({
+      diagnostics: [
+        diagnostic(
+          "error",
+          "EDIT_CONTRACT_SOURCE_MISSING",
+          "The selected local contract source is not available for editing."
+        ),
+      ],
+      type: "editable-contract",
+    });
+    return;
+  }
+
+  const editable = createEditableContractDraft(repository, recognitionCode);
+  post({
+    diagnostics: editable.diagnostics,
+    draft: editable.draft,
+    type: "editable-contract",
+  });
+};
+
+const saveEditableContract = (draft: DatevEditableContractDraft): void => {
+  const edited = createEditedSessionContractRepository(draft);
+  if (edited.repository) {
+    editedSessionContractRepository = edited.repository;
+  }
+  post({
+    diagnostics: edited.diagnostics,
+    draft: edited.repository ? draft : undefined,
+    summary: edited.repository?.summary,
+    type: "editable-contract",
+  });
+};
+
+const discardEditableContract = (): void => {
+  editedSessionContractRepository = undefined;
+  post({
+    diagnostics: [],
+    type: "editable-contract",
+  });
+};
+
 const validateFile = async (
   file: File,
   contractSource: DatevActiveContractSourceKind | undefined
@@ -289,6 +343,18 @@ self.addEventListener(
     void (async () => {
       if (request.type === "load-contracts") {
         await loadContractFiles(request.files);
+        return;
+      }
+      if (request.type === "create-editable-contract") {
+        createEditableContract(request.recognitionCode, request.contractSource);
+        return;
+      }
+      if (request.type === "save-editable-contract") {
+        saveEditableContract(request.draft);
+        return;
+      }
+      if (request.type === "discard-editable-contract") {
+        discardEditableContract();
         return;
       }
       await validateFile(request.file, request.contractSource);
