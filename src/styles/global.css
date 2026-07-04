@@ -529,6 +529,106 @@ dd {
   min-height: 22px;
 }
 
+.report-block {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.report-heading,
+.report-section-heading {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.report-heading span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-align: right;
+}
+
+.report-intro,
+.report-section p,
+.report-section-counts {
+  color: var(--muted);
+}
+
+.report-facts {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.report-facts div {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 9px 10px;
+}
+
+.report-section-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.report-section h4,
+.report-actions-block h3 {
+  font-size: 0.98rem;
+  margin: 0;
+}
+
+.report-section-status {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 3px 8px;
+}
+
+.report-section-status.is-passed {
+  border-color: var(--accent);
+  color: var(--success);
+}
+
+.report-section-status.is-failed {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.report-section-status.is-warning {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.report-diagnostic-list,
+.report-actions-block ul {
+  color: var(--ink);
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.report-actions-block {
+  background: var(--panel-muted);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
 .diagnostics-card {
   display: grid;
   gap: 10px;
@@ -725,13 +825,16 @@ tbody tr:last-child td {
   }
 
   .meta-grid,
+  .report-facts,
   .format-list,
   .content-grid {
     grid-template-columns: 1fr;
   }
 
   .result-heading,
-  .diagnostics-heading {
+  .diagnostics-heading,
+  .report-heading,
+  .report-section-heading {
     display: grid;
   }
 }

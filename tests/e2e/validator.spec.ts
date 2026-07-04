@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
-import { validGlAccountDescriptionCsv } from "../unit/datev-test-fixtures";
+import {
+  csvLine,
+  headerLine,
+  validGlAccountDescriptionCsv,
+} from "../unit/datev-test-fixtures";
 
 const appOrigin = "http://127.0.0.1:4321";
 
@@ -146,13 +151,79 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("#metaRecognition")).toHaveText(
     "datev-gl-account-description-v3"
   );
+  await expect(
+    page.getByRole("heading", { name: "Structured validation report" })
+  ).toBeVisible();
+  await expect(page.getByText("Field semantics")).toBeVisible();
+  await expect(page.getByText("Recommended next actions")).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("Kasse lang");
   await expect(page.locator(".trust-icon")).toHaveCount(3);
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expect(htmlReport).toContain("DATEV CSV Validator Report");
+  expect(htmlReport).toContain("No upload");
+  expect(htmlReport).toContain("datev-gl-account-description-v3");
+  expect(htmlReport).not.toContain("Kasse lang");
 
   const themeToggle = page.getByRole("button", {
     name: "Toggle light and dark mode",
   });
   await themeToggle.click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+test("creates a structured report for unsupported local CSV files", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  const unsupportedCsv = [
+    headerLine({ 2: "999", 3: "Unsupported", 4: "1" }),
+    csvLine(["A", "B"]),
+    csvLine(["1", "2"]),
+  ].join("\r\n");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "unsupported.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, unsupportedCsv);
+
+  await expect(
+    page.getByText(
+      "Unsupported by the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Structured validation report" })
+  ).toBeVisible();
+  await expect(page.getByText("Unsupported checks")).toBeVisible();
+  await expect(page.getByText("Not run").first()).toBeVisible();
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expect(htmlReport).toContain("Unsupported");
+  expect(htmlReport).toContain("No supported local contract");
+  expect(htmlReport).not.toContain("EXTF;");
 });
 
 test("legal pages are available without placeholders", async ({ page }) => {
