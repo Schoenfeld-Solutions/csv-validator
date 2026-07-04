@@ -337,6 +337,49 @@ test("rejects unsupported primary file names before reading content", async ({
   expect(htmlReport).not.toContain("primary-secret-value");
 });
 
+test("escapes browser file names in downloaded HTML reports", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  const fileName = "report-<img src=x onerror=alert(1)>.csv";
+
+  await page.evaluate(
+    ({ content, name }) => {
+      const dropzone = document.getElementById("dropzone");
+      if (!dropzone) throw new Error("dropzone missing");
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(new File([content], name, { type: "text/csv" }));
+      dropzone.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer,
+        })
+      );
+    },
+    { content: validGlAccountDescriptionCsv(), name: fileName }
+  );
+
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  expect(htmlDownload.suggestedFilename()).not.toContain("<");
+  expect(htmlDownload.suggestedFilename()).not.toContain(">");
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expect(htmlReport).toContain("report-&lt;img src=x onerror=alert(1)&gt;.csv");
+  expect(htmlReport).not.toContain(fileName);
+  expect(htmlReport).not.toContain("<img src=x");
+});
+
 test("loads synthetic XML contracts locally and validates with mixed source fallback", async ({
   page,
 }) => {
