@@ -118,7 +118,8 @@ processing of DATEV files.
 
 - Files remain in the browser.
 - No upload takes place.
-- Results remain local in the browser until users copy them or download JSON.
+- Results remain local in the browser until users copy JSON or download JSON
+  and HTML reports.
 - HTML reports are generated locally from metadata and diagnostics only.
 - Uploaded DATEV format XML files are parsed locally in the browser worker,
   kept only for the current session, and never uploaded or stored by the site.
