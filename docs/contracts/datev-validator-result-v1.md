@@ -7,6 +7,7 @@ DATEV file are not emitted by default.
 Primary CSV/TXT validation accepts only file names ending in `.csv` or `.txt`.
 Other primary files are rejected before parsing and still return this result
 schema without emitting raw file contents.
+
 `source.name` is a sanitized browser-provided base name. Local absolute paths
 are not emitted.
 
