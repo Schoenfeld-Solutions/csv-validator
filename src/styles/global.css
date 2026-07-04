@@ -370,6 +370,45 @@ main {
   text-align: center;
 }
 
+.contract-source-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.contract-source-copy,
+.contract-source-status {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.contract-source-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.contract-source-select-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.contract-source-select {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92rem;
+  min-height: 38px;
+  padding: 7px 34px 7px 10px;
+}
+
 .trust-block {
   color: var(--muted);
   display: grid;

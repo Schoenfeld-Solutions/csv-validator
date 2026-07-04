@@ -109,6 +109,41 @@ describe("buildValidationReport", () => {
     });
   });
 
+  it("keeps uploaded contract source metadata and groups XML diagnostics", () => {
+    const result = {
+      ...validate(validGlAccountDescriptionCsv()),
+      diagnostics: [
+        {
+          code: "XML_CONTRACT_FILE_TOO_LARGE",
+          message: "A local DATEV XML contract file exceeds the limit.",
+          severity: "error",
+        },
+      ],
+      status: "invalid",
+      summary: {
+        errorCount: 1,
+        warningCount: 0,
+      },
+    } satisfies DatevLiteValidationResult;
+    const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z", {
+      contractCount: 1,
+      kind: "uploaded",
+      label: "Uploaded DATEV XML contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    });
+
+    expect(report.contractSource).toBe("uploaded");
+    expect(report.contractSourceSummary).toMatchObject({
+      contractCount: 1,
+      kind: "uploaded",
+    });
+    expect(sectionById(report, "contract")).toMatchObject({
+      errorCount: 1,
+      status: "failed",
+    });
+  });
+
   it("assigns invalid field diagnostics to actionable report categories", () => {
     const result = validate(
       [

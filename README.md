@@ -31,6 +31,9 @@ implemented DATEV CSV structural contract:
   explicit user action.
 - An optional local data preview for the first parsed rows after explicit user
   approval. Preview values are not exported.
+- An advanced local DATEV format XML mode that lets users load session-local
+  XML contract files in the browser worker and explicitly validate CSV/TXT
+  files against that uploaded contract source.
 
 The status `valid` means only:
 
@@ -58,7 +61,8 @@ It does not mean that a DATEV application will accept the file.
 The MVP does not implement server uploads, storage, account or login features,
 official DATEV tool execution, DATEV check-program automation, generic
 CalculationRule engines, AdditionalValidationRules, cross-record or
-cross-field booking logic, Business Central imports, or guarantees that
+cross-field booking logic, unrestricted XML rule execution, persistence of
+uploaded XML contracts, Business Central imports, or guarantees that
 official DATEV tools will make the same decision.
 
 ## Development
@@ -103,6 +107,8 @@ processing of DATEV files.
 - No upload takes place.
 - Results remain local in the browser until users copy them or download JSON.
 - HTML reports are generated locally from metadata and diagnostics only.
+- Uploaded DATEV format XML files are parsed locally in the browser worker,
+  kept only for the current session, and never uploaded or stored by the site.
 - File contents are not displayed as raw data in the UI by default.
 - The optional data preview is disabled by default, stays in the browser, and
   is not included in JSON or HTML reports.

@@ -3,11 +3,30 @@ import { readFile } from "node:fs/promises";
 
 import {
   csvLine,
+  headerFor,
   headerLine,
   validGlAccountDescriptionCsv,
 } from "../unit/datev-test-fixtures";
 
 const appOrigin = "http://127.0.0.1:4321";
+
+const validCustomContractXml = (): string =>
+  [
+    '<datev-format-contracts version="1">',
+    '<contract recognitionCode="synthetic-format-v1" formatCategory="99" formatName="Synthetic Format" formatVersion="1" markers="EXTF" requiredCaptions="Konto,Beschriftung" dataKind="synthetic">',
+    '<field number="1" caption="Konto" type="Konto" maxLength="9" decimalPlaces="0" necessary="true" formatExpression="" />',
+    '<field number="2" caption="Beschriftung" type="Text" maxLength="40" decimalPlaces="0" necessary="true" formatExpression="" />',
+    '<field number="3" caption="Datum" type="Datum" maxLength="4" decimalPlaces="0" necessary="false" formatExpression="TTMM" />',
+    "</contract>",
+    "</datev-format-contracts>",
+  ].join("");
+
+const validCustomContractCsv = (): string =>
+  [
+    headerFor("99", "Synthetic Format", "1"),
+    csvLine(["Konto", "Beschriftung", "Datum"]),
+    csvLine(["1000", "custom-hidden-value", "0101"]),
+  ].join("\r\n");
 
 test("root redirects German browser locale to German validator", async ({
   browser,
@@ -244,6 +263,110 @@ test("validates a dropped local CSV file and toggles theme", async ({
   });
   await themeToggle.click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+test("loads synthetic XML contracts locally and validates against the selected custom source", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "synthetic-contract.xml",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "1 XML contract loaded locally"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("uploaded");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "custom-contract-file.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validCustomContractCsv());
+
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "synthetic-format-v1"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Loaded XML contracts (1)"
+  );
+  await expect(page.locator("body")).not.toContainText("custom-hidden-value");
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("synthetic-format-v1");
+  expect(copiedJson).not.toContain("custom-hidden-value");
+  expect(copiedJson).not.toContain("datev-format-contracts");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expect(htmlReport).toContain("Loaded XML contracts (1)");
+  expect(htmlReport).not.toContain("custom-hidden-value");
+  expect(htmlReport).not.toContain("datev-format-contracts");
+
+  await page.locator("#contractSourceSelect").selectOption("built-in");
+
+  await expect(
+    page.getByText(
+      "Unsupported by the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaRecognition")).toHaveText("-");
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in local contracts"
+  );
+});
+
+test("rejects oversized XML contracts before interpretation", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.alloc(2 * 1024 * 1024 + 1, "x"),
+    mimeType: "application/xml",
+    name: "too-large.xml",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_FILE_TOO_LARGE"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
 });
 
 test("creates a structured report for unsupported local CSV files", async ({

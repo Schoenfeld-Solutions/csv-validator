@@ -1,4 +1,6 @@
 import type {
+  DatevActiveContractSourceKind,
+  DatevContractSourceSummary,
   DatevDataPreview,
   DatevLiteDiagnostic,
   DatevLiteValidationResult,
@@ -22,6 +24,18 @@ const getElement = <T extends HTMLElement>(id: string, typeName: string): T => {
 };
 
 const fileInput = getElement<HTMLInputElement>("fileInput", "input");
+const xmlContractInput = getElement<HTMLInputElement>(
+  "xmlContractInput",
+  "input"
+);
+const contractSourceSelect = getElement<HTMLSelectElement>(
+  "contractSourceSelect",
+  "select"
+);
+const xmlContractStatus = getElement<HTMLParagraphElement>(
+  "xmlContractStatus",
+  "p"
+);
 const dropzone = getElement<HTMLLabelElement>("dropzone", "label");
 const statusLine = getElement<HTMLDivElement>("statusLine", "div");
 const resultPanel = getElement<HTMLElement>("resultPanel", "section");
@@ -38,6 +52,7 @@ const metaDelimiter = getElement<HTMLElement>("metaDelimiter", "dd");
 const metaRows = getElement<HTMLElement>("metaRows", "dd");
 const metaDataRows = getElement<HTMLElement>("metaDataRows", "dd");
 const metaFields = getElement<HTMLElement>("metaFields", "dd");
+const metaContractSource = getElement<HTMLElement>("metaContractSource", "dd");
 const diagnosticSummary = getElement<HTMLSpanElement>(
   "diagnosticSummary",
   "span"
@@ -120,6 +135,9 @@ const worker = new Worker(
 let latestResult: DatevLiteValidationResult | undefined;
 let latestReport: DatevValidationReport | undefined;
 let latestPreview: DatevDataPreview | undefined;
+let latestFile: File | undefined;
+let uploadedContractSource: DatevContractSourceSummary | undefined;
+let activeContractSource: DatevActiveContractSourceKind = "built-in";
 let isDataPreviewEnabled = false;
 
 const setText = (element: HTMLElement, value: string): void => {
@@ -139,10 +157,44 @@ const formatBytes = (bytes: number): string => {
   }).format(value)} ${units[unitIndex]}`;
 };
 
+const formatContractSource = (
+  summary: DatevContractSourceSummary | undefined
+): string => {
+  if (!summary) return "-";
+  const base =
+    summary.kind === "uploaded"
+      ? copy.contractSource.uploadedSummary(summary.contractCount)
+      : summary.kind === "built-in"
+        ? copy.contractSource.builtInSummary
+        : copy.report.contractSource[summary.kind];
+  const details = copy.contractSource.summaryDetails(
+    summary.overrideCount,
+    summary.warningCount
+  );
+  return details ? `${base} (${details})` : base;
+};
+
+const syncContractSourceControl = (): void => {
+  const uploadedOption = contractSourceSelect.querySelector(
+    'option[value="uploaded"]'
+  );
+  if (uploadedOption instanceof HTMLOptionElement) {
+    uploadedOption.disabled = uploadedContractSource === undefined;
+    uploadedOption.textContent = uploadedContractSource
+      ? copy.contractSource.uploadedOption(uploadedContractSource.contractCount)
+      : copy.contractSource.uploadedUnavailable;
+  }
+  if (activeContractSource === "uploaded" && !uploadedContractSource) {
+    activeContractSource = "built-in";
+  }
+  contractSourceSelect.value = activeContractSource;
+};
+
 const validateFile = (file: File): void => {
   latestResult = undefined;
   latestReport = undefined;
   latestPreview = undefined;
+  latestFile = file;
   isDataPreviewEnabled = false;
   copyJsonButton.disabled = true;
   downloadJsonButton.disabled = true;
@@ -155,13 +207,38 @@ const validateFile = (file: File): void => {
     locale === "de"
       ? `${file.name} (${formatBytes(file.size)}) ${copy.processing}...`
       : `${file.name} (${formatBytes(file.size)}) ${copy.processing}...`;
-  const request: WorkerValidationRequest = { file, type: "validate" };
+  const request: WorkerValidationRequest = {
+    contractSource: activeContractSource,
+    file,
+    type: "validate",
+  };
   worker.postMessage(request);
 };
 
 fileInput.addEventListener("change", () => {
   const file = fileInput.files?.[0];
   if (file) validateFile(file);
+});
+
+xmlContractInput.addEventListener("change", () => {
+  const files = Array.from(xmlContractInput.files ?? []);
+  if (files.length === 0) return;
+  xmlContractStatus.textContent = copy.contractSource.loading(files.length);
+  const request: WorkerValidationRequest = {
+    files,
+    type: "load-contracts",
+  };
+  worker.postMessage(request);
+  xmlContractInput.value = "";
+});
+
+contractSourceSelect.addEventListener("change", () => {
+  activeContractSource =
+    contractSourceSelect.value === "uploaded" ? "uploaded" : "built-in";
+  syncContractSourceControl();
+  if (latestFile) {
+    validateFile(latestFile);
+  }
 });
 
 for (const eventName of ["dragenter", "dragover"]) {
@@ -191,17 +268,39 @@ worker.addEventListener(
       statusLine.textContent = message.message;
       return;
     }
+    if (message.type === "contracts") {
+      if (message.summary) {
+        uploadedContractSource = message.summary;
+        activeContractSource = "uploaded";
+        xmlContractStatus.textContent = copy.contractSource.loaded(
+          message.summary.contractCount,
+          message.summary.warningCount
+        );
+        syncContractSourceControl();
+        if (latestFile) validateFile(latestFile);
+        return;
+      }
+      uploadedContractSource = undefined;
+      activeContractSource = "built-in";
+      syncContractSourceControl();
+      xmlContractStatus.textContent = copy.contractSource.rejected(
+        [...new Set(message.diagnostics.map((item) => item.code))].join(", ")
+      );
+      if (latestFile) validateFile(latestFile);
+      return;
+    }
     latestResult = message.result;
     latestPreview = message.preview;
-    renderResult(message.result, message.preview);
+    renderResult(message.result, message.preview, message.contractSource);
   }
 );
 
 const renderResult = (
   result: DatevLiteValidationResult,
-  preview: DatevDataPreview | undefined
+  preview: DatevDataPreview | undefined,
+  contractSource: DatevContractSourceSummary | undefined
 ): void => {
-  latestReport = buildValidationReport(result);
+  latestReport = buildValidationReport(result, undefined, contractSource);
   isDataPreviewEnabled = false;
   resultPanel.hidden = false;
   copyJsonButton.disabled = false;
@@ -209,7 +308,7 @@ const renderResult = (
   downloadHtmlReportButton.disabled = false;
   statusLine.textContent = `${result.source.name} ${copy.processed}.`;
   renderBadge(result);
-  renderMetadata(result);
+  renderMetadata(result, contractSource);
   renderValidationReport(latestReport, result);
   renderDiagnostics(result.diagnostics);
   renderDataPreviewGate(result, preview);
@@ -386,7 +485,10 @@ const renderBadge = (result: DatevLiteValidationResult): void => {
         : copy.invalid;
 };
 
-const renderMetadata = (result: DatevLiteValidationResult): void => {
+const renderMetadata = (
+  result: DatevLiteValidationResult,
+  contractSource: DatevContractSourceSummary | undefined
+): void => {
   setText(metaRecognition, result.format?.recognitionCode ?? "-");
   setText(
     metaFormat,
@@ -403,6 +505,7 @@ const renderMetadata = (result: DatevLiteValidationResult): void => {
     metaFields,
     result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount)
   );
+  setText(metaContractSource, formatContractSource(contractSource));
 };
 
 const renderValidationReport = (
@@ -427,6 +530,11 @@ const renderReportFacts = (
     reportFacts,
     copy.report.sections.contract,
     copy.report.contractSource[report.contractSource]
+  );
+  appendFact(
+    reportFacts,
+    copy.metadata.contractSource,
+    formatContractSource(report.contractSourceSummary)
   );
   appendFact(
     reportFacts,
@@ -667,6 +775,7 @@ const createHtmlReport = (
       ${createFactHtml(copy.metadata.dataRows, String(result.csv.dataRecordCount))}
       ${createFactHtml(copy.metadata.fields, result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount))}
       ${createFactHtml(copy.report.sections.contract, copy.report.contractSource[report.contractSource])}
+      ${createFactHtml(copy.metadata.contractSource, formatContractSource(report.contractSourceSummary))}
       ${createFactHtml(copy.metadata.recognition, result.format?.recognitionCode ?? "-")}
     </dl>
     <h2>${escapeHtml(copy.report.nextActions)}</h2>
