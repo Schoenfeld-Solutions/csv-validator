@@ -100,8 +100,9 @@ Local pages:
 - `http://127.0.0.1:4321/csv-validator/en/` English validator
 
 `npm run preflight` is the canonical local gate. It runs the full lockfile
-audit at severity `low`, formatting checks, linting, type checks, unit tests
-with coverage, production build, Playwright smoke test, and Lighthouse gate.
+audit at severity `low`, governance checks, formatting checks, linting, type
+checks, unit tests with coverage, production build, public copy checks,
+Playwright smoke tests, and the Lighthouse gate.
 
 ## Deployment
 
