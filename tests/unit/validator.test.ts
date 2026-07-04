@@ -36,6 +36,42 @@ const validate = (content: string) =>
 const diagnosticCodes = (content: string): string[] =>
   validate(content).diagnostics.map((item) => item.code);
 
+type BookingBatchRecognitionCode =
+  | "datev-booking-batch-v13"
+  | "datev-booking-batch-v12"
+  | "datev-booking-batch-v11"
+  | "datev-booking-batch-v10";
+
+const bookingBatchRecognitionCodes: readonly BookingBatchRecognitionCode[] = [
+  "datev-booking-batch-v13",
+  "datev-booking-batch-v12",
+  "datev-booking-batch-v11",
+  "datev-booking-batch-v10",
+];
+
+const bookingBatchCsvFor = (
+  recognitionCode: BookingBatchRecognitionCode,
+  overrides: Partial<Record<number, string>> = {}
+): string => {
+  const fields = getFields(recognitionCode).map(() => "");
+  fields[0] = "1,00";
+  fields[1] = "S";
+  fields[6] = "1000";
+  fields[7] = "1200";
+  fields[9] = "0101";
+  for (const [index, value] of Object.entries(overrides) as [
+    string,
+    string,
+  ][]) {
+    fields[Number(index)] = value;
+  }
+  return [
+    headerFor("21", "Buchungsstapel", recognitionCode.slice(-2)),
+    contractCaptionLine(recognitionCode),
+    csvLine(fields),
+  ].join("\r\n");
+};
+
 describe("validateDatevContent", () => {
   it("returns valid for a minimal GL account description file", () => {
     const result = validate(validGlAccountDescriptionCsv());
@@ -80,12 +116,7 @@ describe("validateDatevContent", () => {
       maxLength: 2,
     });
 
-    for (const recognitionCode of [
-      "datev-booking-batch-v13",
-      "datev-booking-batch-v12",
-      "datev-booking-batch-v11",
-      "datev-booking-batch-v10",
-    ] as const) {
+    for (const recognitionCode of bookingBatchRecognitionCodes) {
       expect(getFields(recognitionCode)[4]).toMatchObject({
         caption: "Basis-Umsatz",
         fieldNumber: 5,
@@ -102,6 +133,15 @@ describe("validateDatevContent", () => {
         fieldNumber: 13,
         formatType: "Betrag",
       });
+      for (const fieldNumber of [93, 115, 116]) {
+        expect(getRules(recognitionCode)[fieldNumber - 1]).toMatchObject({
+          fieldNumber,
+          formatExpression: "",
+          formatType: "Datum",
+          maxLength: 8,
+          necessary: false,
+        });
+      }
     }
 
     for (const recognitionCode of [
@@ -506,6 +546,69 @@ describe("validateDatevContent", () => {
     );
   });
 
+  it("accepts booking batch optional full-date runtime fields when blank or valid", () => {
+    for (const recognitionCode of bookingBatchRecognitionCodes) {
+      for (const fieldNumber of [93, 115, 116]) {
+        for (const value of ["", "01012026", "31122026", "29022024"]) {
+          const result = validate(
+            bookingBatchCsvFor(recognitionCode, { [fieldNumber - 1]: value })
+          );
+
+          expect(result.status).toBe("valid");
+          expect(result.diagnostics).not.toContainEqual(
+            expect.objectContaining({ fieldIndex: fieldNumber })
+          );
+        }
+      }
+    }
+  });
+
+  it("rejects booking batch optional full-date runtime fields fail-closed", () => {
+    const result = validate(
+      [
+        bookingBatchCsvFor("datev-booking-batch-v13", {
+          92: "0",
+          114: "00000000",
+          115: "31022026",
+        }),
+        bookingBatchRow({ 92: "1", 114: "32012026", 115: "0101202A" }),
+      ].join("\r\n")
+    );
+
+    expect(result.status).toBe("invalid");
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "FIELD_DATE_TTMMJJJJ",
+          fieldIndex: 93,
+        }),
+        expect.objectContaining({
+          code: "FIELD_DATE_INVALID",
+          fieldIndex: 115,
+        }),
+        expect.objectContaining({
+          code: "FIELD_DATE_INVALID",
+          fieldIndex: 116,
+        }),
+        expect.objectContaining({
+          code: "FIELD_DATE_TTMMJJJJ",
+          fieldIndex: 116,
+        }),
+      ])
+    );
+  });
+
+  it("keeps unrelated booking batch date fields without expression unchanged", () => {
+    const result = validate(
+      bookingBatchCsvFor("datev-booking-batch-v13", { 103: "1" })
+    );
+
+    expect(result.status).toBe("valid");
+    expect(result.diagnostics).not.toContainEqual(
+      expect.objectContaining({ fieldIndex: 104 })
+    );
+  });
+
   it("rejects decimal digit and date expression violations", () => {
     const bookingResult = validate(
       [
@@ -522,7 +625,7 @@ describe("validateDatevContent", () => {
       expect.arrayContaining([
         "FIELD_NUMBER_DECIMAL_DIGITS",
         "FIELD_DATE_TTMM",
-        "FIELD_DATE_DIGITS",
+        "FIELD_DATE_TTMMJJJJ",
       ])
     );
 

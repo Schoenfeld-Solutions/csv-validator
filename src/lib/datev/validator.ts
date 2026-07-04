@@ -27,7 +27,8 @@ const HEADER_DATE_FROM_INDEX = 14;
 const HEADER_DATE_TO_INDEX = 15;
 const PAYMENT_TERMS_PERCENT_INTEGER_DIGITS = 4;
 
-type NumericRuntimeRule = "paymentTermsPercent" | "nonNegativeAmount";
+type RuntimeRule =
+  "paymentTermsPercent" | "nonNegativeAmount" | "bookingBatchOptionalFullDate";
 
 const PAYMENT_TERMS_PERCENT_FIELDS = new Set<string>([
   "datev-payment-terms-v2:4",
@@ -47,6 +48,21 @@ const NON_NEGATIVE_AMOUNT_FIELDS = new Set<string>([
   "datev-recurring-bookings-v4:19",
   "datev-recurring-bookings-v3:6",
   "datev-recurring-bookings-v3:19",
+]);
+
+const BOOKING_BATCH_OPTIONAL_FULL_DATE_FIELDS = new Set<string>([
+  "datev-booking-batch-v13:93",
+  "datev-booking-batch-v13:115",
+  "datev-booking-batch-v13:116",
+  "datev-booking-batch-v12:93",
+  "datev-booking-batch-v12:115",
+  "datev-booking-batch-v12:116",
+  "datev-booking-batch-v11:93",
+  "datev-booking-batch-v11:115",
+  "datev-booking-batch-v11:116",
+  "datev-booking-batch-v10:93",
+  "datev-booking-batch-v10:115",
+  "datev-booking-batch-v10:116",
 ]);
 
 export interface ValidateDatevContentInput {
@@ -668,7 +684,7 @@ const validateCell = (
   const validationMessage = validateValue(
     cell.value,
     rule,
-    getNumericRuntimeRule(recognitionCode, field.fieldNumber)
+    getRuntimeRule(recognitionCode, field.fieldNumber)
   );
   if (validationMessage) {
     diagnostics.push(
@@ -686,10 +702,18 @@ const validateCell = (
 const validateValue = (
   value: string,
   rule: DatevLiteFieldRuleContract,
-  runtimeRule?: NumericRuntimeRule
+  runtimeRule?: RuntimeRule
 ): { code: string; message: string } | undefined => {
   if (runtimeRule === "paymentTermsPercent") {
     return validatePaymentTermsPercent(value, rule);
+  }
+  if (
+    runtimeRule === "bookingBatchOptionalFullDate" &&
+    rule.formatType === "Datum" &&
+    rule.maxLength === 8 &&
+    rule.decimalPlaces === 0
+  ) {
+    return validateFullDate(value);
   }
 
   let validationMessage: { code: string; message: string } | undefined;
@@ -859,13 +883,16 @@ const validatePaymentTermsPercent = (
   };
 };
 
-const getNumericRuntimeRule = (
+const getRuntimeRule = (
   recognitionCode: string,
   fieldNumber: number
-): NumericRuntimeRule | undefined => {
+): RuntimeRule | undefined => {
   const key = `${recognitionCode}:${fieldNumber}`;
   if (PAYMENT_TERMS_PERCENT_FIELDS.has(key)) return "paymentTermsPercent";
   if (NON_NEGATIVE_AMOUNT_FIELDS.has(key)) return "nonNegativeAmount";
+  if (BOOKING_BATCH_OPTIONAL_FULL_DATE_FIELDS.has(key)) {
+    return "bookingBatchOptionalFullDate";
+  }
   return undefined;
 };
 
@@ -890,21 +917,7 @@ const validateDateValue = (
         };
   }
   if (rule.formatExpression === "TTMMJJJJ") {
-    if (!/^[0-9]{8}$/.test(value)) {
-      return {
-        code: "FIELD_DATE_TTMMJJJJ",
-        message: "Date fields with TTMMJJJJ must use eight digits.",
-      };
-    }
-    const day = Number(value.slice(0, 2));
-    const month = Number(value.slice(2, 4));
-    const year = Number(value.slice(4, 8));
-    return isValidUtcDate(year, month, day)
-      ? undefined
-      : {
-          code: "FIELD_DATE_INVALID",
-          message: "Date fields must contain a valid date.",
-        };
+    return validateFullDate(value);
   }
   if (!/^[0-9]+$/.test(value)) {
     return {
@@ -918,6 +931,26 @@ const validateDateValue = (
         message: `Date fields must be at most ${rule.maxLength} digits.`,
       }
     : undefined;
+};
+
+const validateFullDate = (
+  value: string
+): { code: string; message: string } | undefined => {
+  if (!/^[0-9]{8}$/.test(value)) {
+    return {
+      code: "FIELD_DATE_TTMMJJJJ",
+      message: "Date fields with TTMMJJJJ must use eight digits.",
+    };
+  }
+  const day = Number(value.slice(0, 2));
+  const month = Number(value.slice(2, 4));
+  const year = Number(value.slice(4, 8));
+  return isValidUtcDate(year, month, day)
+    ? undefined
+    : {
+        code: "FIELD_DATE_INVALID",
+        message: "Date fields must contain a valid date.",
+      };
 };
 
 const isValidUtcDate = (year: number, month: number, day: number): boolean => {

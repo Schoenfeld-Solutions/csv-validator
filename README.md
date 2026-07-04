@@ -25,6 +25,9 @@ implemented DATEV CSV structural contract:
 - Data row checks for field count, required fields, types `Text`, `Konto`,
   `Zahl`, `Betrag`, `Datum`, maximum length, decimal places, and `TTMM` and
   `TTMMJJJJ` date bounds.
+- Narrow observed runtime rules for payment terms percent fields,
+  non-negative `Skonto`/`Basis-Umsatz` amounts, and selected booking batch
+  optional full-date fields.
 - Browser-side fail-closed rejection for files larger than the documented
   10 MiB processing limit.
 - Structured local report sections and JSON/HTML report export only after
@@ -67,8 +70,8 @@ The MVP does not implement server uploads, storage, account or login features,
 official DATEV tool execution, DATEV check-program automation, generic
 CalculationRule engines, AdditionalValidationRules, cross-record or
 cross-field booking logic, unrestricted XML rule execution, persistence of
-uploaded or edited session-local contracts, Business Central imports, or guarantees that
-official DATEV tools will make the same decision.
+uploaded or edited session-local contracts, Business Central imports, or
+guarantees that official DATEV tools will make the same decision.
 
 ## Development
 
