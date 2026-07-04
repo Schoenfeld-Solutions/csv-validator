@@ -17,6 +17,12 @@ defaults, and are discarded when the session ends. Contract-source labels,
 counts, and override warnings are UI/report metadata and are intentionally
 outside this stable JSON result schema.
 
+Uploaded XML contract files are interpreted only as a constrained local
+structural contract subset. A single safe leading XML declaration may be
+accepted, while DOCTYPE declarations, entities, external references, and
+arbitrary processing instructions remain unsupported before interpretation.
+Raw XML is not included in this result schema or generated HTML reports.
+
 The browser worker may also return a session-local data preview payload for
 the current UI session. That preview is intentionally outside this JSON result
 schema and outside generated reports because it can contain raw CSV/TXT values.
