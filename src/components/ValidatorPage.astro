@@ -81,6 +81,9 @@ const copy = appCopy[locale];
           <option value="uploaded" disabled>
             {copy.contractSource.uploadedUnavailable}
           </option>
+          <option value="mixed" disabled>
+            {copy.contractSource.mixedUnavailable}
+          </option>
         </select>
       </div>
       <p
@@ -181,6 +184,8 @@ const copy = appCopy[locale];
             <dd id="metaContractSource">-</dd>
           </div>
         </dl>
+        <p class="contract-source-warning" id="contractSourceWarning" hidden>
+        </p>
 
         <div class="result-actions">
           <button

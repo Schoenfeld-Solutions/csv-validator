@@ -3,7 +3,10 @@ import {
   detectAndDecodeBytes,
   MAX_FILE_SIZE_BYTES,
 } from "../lib/datev/encoding";
-import { BUILT_IN_CONTRACT_REPOSITORY } from "../lib/datev/contracts";
+import {
+  BUILT_IN_CONTRACT_REPOSITORY,
+  createMixedContractRepository,
+} from "../lib/datev/contracts";
 import { importDatevXmlContractSet } from "../lib/datev/custom-xml";
 import {
   createRejectedResult,
@@ -27,6 +30,7 @@ const post = (message: WorkerValidationResponse): void => {
 };
 
 let uploadedContractRepository: DatevContractRepository | undefined;
+let mixedContractRepository: DatevContractRepository | undefined;
 
 const readFileBytes = async (
   file: File,
@@ -61,11 +65,14 @@ const getContractRepository = (
 ): DatevContractRepository | undefined =>
   source === "uploaded"
     ? uploadedContractRepository
-    : BUILT_IN_CONTRACT_REPOSITORY;
+    : source === "mixed"
+      ? mixedContractRepository
+      : BUILT_IN_CONTRACT_REPOSITORY;
 
 const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   if (files.length === 0) {
     uploadedContractRepository = undefined;
+    mixedContractRepository = undefined;
     post({
       diagnostics: [
         diagnostic(
@@ -81,6 +88,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
 
   if (files.length > MAX_XML_CONTRACT_FILES) {
     uploadedContractRepository = undefined;
+    mixedContractRepository = undefined;
     post({
       diagnostics: [
         diagnostic(
@@ -120,6 +128,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   }
   if (sizeDiagnostics.length > 0) {
     uploadedContractRepository = undefined;
+    mixedContractRepository = undefined;
     post({ diagnostics: sizeDiagnostics, type: "contracts" });
     return;
   }
@@ -156,6 +165,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
 
   if (diagnostics.some((item) => item.severity === "error")) {
     uploadedContractRepository = undefined;
+    mixedContractRepository = undefined;
     post({ diagnostics, type: "contracts" });
     return;
   }
@@ -166,8 +176,15 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   });
   const imported = importDatevXmlContractSet(xmlContents);
   uploadedContractRepository = imported.repository;
+  mixedContractRepository = imported.repository
+    ? createMixedContractRepository(
+        BUILT_IN_CONTRACT_REPOSITORY,
+        imported.repository
+      )
+    : undefined;
   post({
     diagnostics: imported.diagnostics,
+    mixedSummary: mixedContractRepository?.summary,
     summary: imported.repository?.summary,
     type: "contracts",
   });

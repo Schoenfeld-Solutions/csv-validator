@@ -116,8 +116,15 @@ export const appCopy = {
       selectLabel: "Aktive Quelle",
       builtInOption: "Eingebaute Verträge",
       uploadedUnavailable: "Geladene XML-Verträge nicht verfügbar",
+      mixedUnavailable: "Eingebaute plus XML-Verträge nicht verfügbar",
       uploadedOption: (count: number) =>
         `${count} geladene XML-Verträge verwenden`,
+      mixedOption: (count: number, overrides: number) =>
+        `Eingebaute plus ${count} XML-Verträge${
+          overrides > 0
+            ? ` (${overrides} Override${overrides === 1 ? "" : "s"})`
+            : ""
+        }`,
       defaultStatus:
         "Standard: eingebaute lokale Strukturverträge werden verwendet.",
       loading: (count: number) =>
@@ -132,6 +139,13 @@ export const appCopy = {
         `XML-Verträge wurden nicht übernommen: ${codes}.`,
       builtInSummary: "Eingebaute lokale Verträge",
       uploadedSummary: (count: number) => `Geladene XML-Verträge (${count})`,
+      mixedSummary: (count: number) =>
+        `Eingebaute plus geladene XML-Verträge (${count})`,
+      overrideWarningLabel: "Override-Warnung",
+      overrideWarning: (count: number) =>
+        `${count} geladene XML-Vertragssignatur${
+          count === 1 ? "" : "en"
+        } überschreibt eingebaute lokale Vertragsdaten für diese Sitzung.`,
       summaryDetails: (overrides: number, warnings: number) =>
         [
           overrides > 0
@@ -265,6 +279,7 @@ export const appCopy = {
       contractSource: {
         "built-in": "Eingebauter lokaler Vertrag",
         "edited-session": "Bearbeiteter Sitzungsvertrag",
+        mixed: "Eingebaute plus geladene XML-Verträge",
         none: "Kein unterstützter lokaler Vertrag",
         uploaded: "Geladener XML-Vertrag",
       },
@@ -327,8 +342,15 @@ export const appCopy = {
       selectLabel: "Active source",
       builtInOption: "Built-in contracts",
       uploadedUnavailable: "Loaded XML contracts unavailable",
+      mixedUnavailable: "Built-in plus XML contracts unavailable",
       uploadedOption: (count: number) =>
         `Use ${count} loaded XML contract${count === 1 ? "" : "s"}`,
+      mixedOption: (count: number, overrides: number) =>
+        `Built-in plus ${count} XML contract${count === 1 ? "" : "s"}${
+          overrides > 0
+            ? ` (${overrides} override${overrides === 1 ? "" : "s"})`
+            : ""
+        }`,
       defaultStatus: "Default: built-in local structural contracts are used.",
       loading: (count: number) =>
         `Loading ${count} XML file${count === 1 ? "" : "s"} locally...`,
@@ -341,6 +363,13 @@ export const appCopy = {
       rejected: (codes: string) => `XML contracts were not applied: ${codes}.`,
       builtInSummary: "Built-in local contracts",
       uploadedSummary: (count: number) => `Loaded XML contracts (${count})`,
+      mixedSummary: (count: number) =>
+        `Built-in plus loaded XML contracts (${count})`,
+      overrideWarningLabel: "Override warning",
+      overrideWarning: (count: number) =>
+        `${count} loaded XML contract signature${
+          count === 1 ? "" : "s"
+        } override built-in local contract data for this session.`,
       summaryDetails: (overrides: number, warnings: number) =>
         [
           overrides > 0
@@ -470,6 +499,7 @@ export const appCopy = {
       contractSource: {
         "built-in": "Built-in local contract",
         "edited-session": "Edited session contract",
+        mixed: "Built-in plus loaded XML contracts",
         none: "No supported local contract",
         uploaded: "Loaded XML contract",
       },

@@ -33,7 +33,10 @@ implemented DATEV CSV structural contract:
   approval. Preview values are not exported.
 - An advanced local DATEV format XML mode that lets users load session-local
   XML contract files in the browser worker and explicitly validate CSV/TXT
-  files against that uploaded contract source.
+  files against built-in, uploaded-only, or mixed built-in plus uploaded
+  contract sources. Mixed mode uses uploaded matching signatures first and
+  shows an override warning when uploaded XML contracts replace built-in
+  structural facts for the current session.
 
 The status `valid` means only:
 
@@ -109,6 +112,8 @@ processing of DATEV files.
 - HTML reports are generated locally from metadata and diagnostics only.
 - Uploaded DATEV format XML files are parsed locally in the browser worker,
   kept only for the current session, and never uploaded or stored by the site.
+- Contract-source labels, counts, and override warnings are local UI/report
+  metadata and do not add raw XML or CSV/TXT values to JSON or HTML reports.
 - File contents are not displayed as raw data in the UI by default.
 - The optional data preview is disabled by default, stays in the browser, and
   is not included in JSON or HTML reports.

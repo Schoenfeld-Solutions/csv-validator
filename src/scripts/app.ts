@@ -53,6 +53,10 @@ const metaRows = getElement<HTMLElement>("metaRows", "dd");
 const metaDataRows = getElement<HTMLElement>("metaDataRows", "dd");
 const metaFields = getElement<HTMLElement>("metaFields", "dd");
 const metaContractSource = getElement<HTMLElement>("metaContractSource", "dd");
+const contractSourceWarning = getElement<HTMLParagraphElement>(
+  "contractSourceWarning",
+  "p"
+);
 const diagnosticSummary = getElement<HTMLSpanElement>(
   "diagnosticSummary",
   "span"
@@ -137,6 +141,7 @@ let latestReport: DatevValidationReport | undefined;
 let latestPreview: DatevDataPreview | undefined;
 let latestFile: File | undefined;
 let uploadedContractSource: DatevContractSourceSummary | undefined;
+let mixedContractSource: DatevContractSourceSummary | undefined;
 let activeContractSource: DatevActiveContractSourceKind = "built-in";
 let isDataPreviewEnabled = false;
 
@@ -164,9 +169,11 @@ const formatContractSource = (
   const base =
     summary.kind === "uploaded"
       ? copy.contractSource.uploadedSummary(summary.contractCount)
-      : summary.kind === "built-in"
-        ? copy.contractSource.builtInSummary
-        : copy.report.contractSource[summary.kind];
+      : summary.kind === "mixed"
+        ? copy.contractSource.mixedSummary(summary.contractCount)
+        : summary.kind === "built-in"
+          ? copy.contractSource.builtInSummary
+          : copy.report.contractSource[summary.kind];
   const details = copy.contractSource.summaryDetails(
     summary.overrideCount,
     summary.warningCount
@@ -184,7 +191,22 @@ const syncContractSourceControl = (): void => {
       ? copy.contractSource.uploadedOption(uploadedContractSource.contractCount)
       : copy.contractSource.uploadedUnavailable;
   }
-  if (activeContractSource === "uploaded" && !uploadedContractSource) {
+  const mixedOption = contractSourceSelect.querySelector(
+    'option[value="mixed"]'
+  );
+  if (mixedOption instanceof HTMLOptionElement) {
+    mixedOption.disabled = mixedContractSource === undefined;
+    mixedOption.textContent = mixedContractSource
+      ? copy.contractSource.mixedOption(
+          mixedContractSource.contractCount,
+          mixedContractSource.overrideCount
+        )
+      : copy.contractSource.mixedUnavailable;
+  }
+  if (
+    (activeContractSource === "uploaded" && !uploadedContractSource) ||
+    (activeContractSource === "mixed" && !mixedContractSource)
+  ) {
     activeContractSource = "built-in";
   }
   contractSourceSelect.value = activeContractSource;
@@ -234,7 +256,11 @@ xmlContractInput.addEventListener("change", () => {
 
 contractSourceSelect.addEventListener("change", () => {
   activeContractSource =
-    contractSourceSelect.value === "uploaded" ? "uploaded" : "built-in";
+    contractSourceSelect.value === "uploaded"
+      ? "uploaded"
+      : contractSourceSelect.value === "mixed"
+        ? "mixed"
+        : "built-in";
   syncContractSourceControl();
   if (latestFile) {
     validateFile(latestFile);
@@ -271,7 +297,8 @@ worker.addEventListener(
     if (message.type === "contracts") {
       if (message.summary) {
         uploadedContractSource = message.summary;
-        activeContractSource = "uploaded";
+        mixedContractSource = message.mixedSummary;
+        activeContractSource = mixedContractSource ? "mixed" : "uploaded";
         xmlContractStatus.textContent = copy.contractSource.loaded(
           message.summary.contractCount,
           message.summary.warningCount
@@ -281,6 +308,7 @@ worker.addEventListener(
         return;
       }
       uploadedContractSource = undefined;
+      mixedContractSource = undefined;
       activeContractSource = "built-in";
       syncContractSourceControl();
       xmlContractStatus.textContent = copy.contractSource.rejected(
@@ -309,6 +337,7 @@ const renderResult = (
   statusLine.textContent = `${result.source.name} ${copy.processed}.`;
   renderBadge(result);
   renderMetadata(result, contractSource);
+  renderContractSourceWarning(contractSource);
   renderValidationReport(latestReport, result);
   renderDiagnostics(result.diagnostics);
   renderDataPreviewGate(result, preview);
@@ -508,6 +537,20 @@ const renderMetadata = (
   setText(metaContractSource, formatContractSource(contractSource));
 };
 
+const renderContractSourceWarning = (
+  contractSource: DatevContractSourceSummary | undefined
+): void => {
+  const overrideCount = contractSource?.overrideCount ?? 0;
+  if (contractSource?.kind === "mixed" && overrideCount > 0) {
+    contractSourceWarning.hidden = false;
+    contractSourceWarning.textContent =
+      copy.contractSource.overrideWarning(overrideCount);
+    return;
+  }
+  contractSourceWarning.hidden = true;
+  contractSourceWarning.textContent = "";
+};
+
 const renderValidationReport = (
   report: DatevValidationReport,
   result: DatevLiteValidationResult
@@ -536,6 +579,18 @@ const renderReportFacts = (
     copy.metadata.contractSource,
     formatContractSource(report.contractSourceSummary)
   );
+  if (
+    report.contractSourceSummary?.kind === "mixed" &&
+    report.contractSourceSummary.overrideCount > 0
+  ) {
+    appendFact(
+      reportFacts,
+      copy.contractSource.overrideWarningLabel,
+      copy.contractSource.overrideWarning(
+        report.contractSourceSummary.overrideCount
+      )
+    );
+  }
   appendFact(
     reportFacts,
     copy.metadata.recognition,
@@ -776,6 +831,17 @@ const createHtmlReport = (
       ${createFactHtml(copy.metadata.fields, result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount))}
       ${createFactHtml(copy.report.sections.contract, copy.report.contractSource[report.contractSource])}
       ${createFactHtml(copy.metadata.contractSource, formatContractSource(report.contractSourceSummary))}
+      ${
+        report.contractSourceSummary?.kind === "mixed" &&
+        report.contractSourceSummary.overrideCount > 0
+          ? createFactHtml(
+              copy.contractSource.overrideWarningLabel,
+              copy.contractSource.overrideWarning(
+                report.contractSourceSummary.overrideCount
+              )
+            )
+          : ""
+      }
       ${createFactHtml(copy.metadata.recognition, result.format?.recognitionCode ?? "-")}
     </dl>
     <h2>${escapeHtml(copy.report.nextActions)}</h2>

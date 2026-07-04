@@ -10,22 +10,51 @@ import {
 
 const appOrigin = "http://127.0.0.1:4321";
 
-const validCustomContractXml = (): string =>
-  [
+const validCustomContractXml = (
+  overrides: Partial<{
+    formatCategory: string;
+    formatName: string;
+    formatVersion: string;
+    recognitionCode: string;
+  }> = {}
+): string => {
+  const {
+    formatCategory = "99",
+    formatName = "Synthetic Format",
+    formatVersion = "1",
+    recognitionCode = "synthetic-format-v1",
+  } = overrides;
+  return [
     '<datev-format-contracts version="1">',
-    '<contract recognitionCode="synthetic-format-v1" formatCategory="99" formatName="Synthetic Format" formatVersion="1" markers="EXTF" requiredCaptions="Konto,Beschriftung" dataKind="synthetic">',
+    `<contract recognitionCode="${recognitionCode}" formatCategory="${formatCategory}" formatName="${formatName}" formatVersion="${formatVersion}" markers="EXTF" requiredCaptions="Konto,Beschriftung" dataKind="synthetic">`,
     '<field number="1" caption="Konto" type="Konto" maxLength="9" decimalPlaces="0" necessary="true" formatExpression="" />',
     '<field number="2" caption="Beschriftung" type="Text" maxLength="40" decimalPlaces="0" necessary="true" formatExpression="" />',
     '<field number="3" caption="Datum" type="Datum" maxLength="4" decimalPlaces="0" necessary="false" formatExpression="TTMM" />',
     "</contract>",
     "</datev-format-contracts>",
   ].join("");
+};
 
 const validCustomContractCsv = (): string =>
   [
     headerFor("99", "Synthetic Format", "1"),
     csvLine(["Konto", "Beschriftung", "Datum"]),
     csvLine(["1000", "custom-hidden-value", "0101"]),
+  ].join("\r\n");
+
+const overridingGlAccountContractXml = (): string =>
+  validCustomContractXml({
+    formatCategory: "20",
+    formatName: "Kontenbeschriftungen",
+    formatVersion: "3",
+    recognitionCode: "custom-gl-account-description-v3",
+  });
+
+const overridingGlAccountCsv = (): string =>
+  [
+    headerFor("20", "Kontenbeschriftungen", "3"),
+    csvLine(["Konto", "Beschriftung", "Datum"]),
+    csvLine(["1000", "override-hidden-value", "0101"]),
   ].join("\r\n");
 
 test("root redirects German browser locale to German validator", async ({
@@ -265,7 +294,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
-test("loads synthetic XML contracts locally and validates against the selected custom source", async ({
+test("loads synthetic XML contracts locally and validates with mixed source fallback", async ({
   page,
 }) => {
   await page.goto("/csv-validator/en/");
@@ -279,7 +308,7 @@ test("loads synthetic XML contracts locally and validates against the selected c
   await expect(page.locator("#xmlContractStatus")).toContainText(
     "1 XML contract loaded locally"
   );
-  await expect(page.locator("#contractSourceSelect")).toHaveValue("uploaded");
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
 
   await page.evaluate((content) => {
     const dropzone = document.getElementById("dropzone");
@@ -306,7 +335,7 @@ test("loads synthetic XML contracts locally and validates against the selected c
     "synthetic-format-v1"
   );
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Loaded XML contracts (1)"
+    "Built-in plus loaded XML contracts"
   );
   await expect(page.locator("body")).not.toContainText("custom-hidden-value");
 
@@ -335,9 +364,56 @@ test("loads synthetic XML contracts locally and validates against the selected c
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
-  expect(htmlReport).toContain("Loaded XML contracts (1)");
+  expect(htmlReport).toContain("Built-in plus loaded XML contracts");
   expect(htmlReport).not.toContain("custom-hidden-value");
   expect(htmlReport).not.toContain("datev-format-contracts");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "built-in-fallback.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validGlAccountDescriptionCsv());
+
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "datev-gl-account-description-v3"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in plus loaded XML contracts"
+  );
+  await expect(page.locator("#contractSourceWarning")).toBeHidden();
+
+  await page.locator("#contractSourceSelect").selectOption("uploaded");
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("uploaded");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "custom-only.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validCustomContractCsv());
+
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Loaded XML contracts (1)"
+  );
 
   await page.locator("#contractSourceSelect").selectOption("built-in");
 
@@ -367,6 +443,58 @@ test("rejects oversized XML contracts before interpretation", async ({
     "XML_CONTRACT_FILE_TOO_LARGE"
   );
   await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+});
+
+test("shows a warning when mixed XML contracts override built-in signatures", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(overridingGlAccountContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "gl-override.xml",
+  });
+
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+  await expect(page.locator("#contractSourceSelect")).toContainText(
+    "1 override"
+  );
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "override.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, overridingGlAccountCsv());
+
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "custom-gl-account-description-v3"
+  );
+  await expect(page.locator("#contractSourceWarning")).toContainText(
+    "override built-in local contract data"
+  );
+  await expect(page.locator("body")).not.toContainText("override-hidden-value");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expect(htmlReport).toContain("Override warning");
+  expect(htmlReport).toContain("override built-in local contract data");
+  expect(htmlReport).not.toContain("override-hidden-value");
+  expect(htmlReport).not.toContain("datev-format-contracts");
 });
 
 test("creates a structured report for unsupported local CSV files", async ({
