@@ -13,7 +13,7 @@ import {
   headerLine,
   validGlAccountDescriptionCsv,
 } from "./datev-test-fixtures";
-import type { DatevLiteValidationResult } from "../../src/lib/datev/types";
+import type { DatevValidationResult } from "../../src/lib/datev/types";
 
 const validate = (content: string) =>
   validateDatevContent({
@@ -59,7 +59,7 @@ describe("buildValidationReport", () => {
         errorCount: 0,
         warningCount: 0,
       },
-    } satisfies DatevLiteValidationResult;
+    } satisfies DatevValidationResult;
     const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z");
 
     expect(report.recommendedActions).toEqual(["ready"]);
@@ -124,7 +124,7 @@ describe("buildValidationReport", () => {
         errorCount: 1,
         warningCount: 0,
       },
-    } satisfies DatevLiteValidationResult;
+    } satisfies DatevValidationResult;
     const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z", {
       contractCount: 1,
       kind: "uploaded",

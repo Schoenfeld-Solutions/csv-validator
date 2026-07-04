@@ -6,6 +6,14 @@ import { promisify } from "node:util";
 const distDirectory = path.resolve("dist");
 const execFileAsync = promisify(execFile);
 
+const collectTrackedFiles = async (pathspecs) => {
+  const { stdout } = await execFileAsync("git", ["ls-files", ...pathspecs], {
+    maxBuffer: 8 * 1024 * 1024,
+  });
+
+  return stdout.split(/\r?\n/).filter(Boolean);
+};
+
 const collectHtmlFiles = async (directory) => {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
@@ -21,15 +29,15 @@ const collectHtmlFiles = async (directory) => {
 };
 
 const collectPublicMarkdownFiles = async () => {
-  const { stdout } = await execFileAsync("git", ["ls-files", "*.md"], {
-    maxBuffer: 8 * 1024 * 1024,
-  });
-
-  return stdout
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .filter((file) => !file.startsWith("docs/plans/"));
+  return (await collectTrackedFiles(["*.md"])).filter(
+    (file) => !file.startsWith("docs/plans/")
+  );
 };
+
+const collectPublicSourceFiles = async () =>
+  (
+    await collectTrackedFiles(["*.ts", "*.tsx", "*.js", "*.mjs", "*.astro"])
+  ).filter((file) => file !== "scripts/check-public-copy.mjs");
 
 const assertPublicCopy = (text, sourceLabel) => {
   if (/\bLite\b|datev-lite/i.test(text)) {
@@ -40,9 +48,23 @@ const assertPublicCopy = (text, sourceLabel) => {
   }
 };
 
+const assertNoLegacySourceIdentifiers = (text, sourceLabel) => {
+  if (/DatevLite|DATEV_LITE|datev-lite/.test(text)) {
+    throw new Error(`${sourceLabel} still contains a legacy validator name.`);
+  }
+};
+
 const markdownFiles = await collectPublicMarkdownFiles();
 for (const markdownFile of markdownFiles) {
   assertPublicCopy(await readFile(markdownFile, "utf8"), markdownFile);
+}
+
+const sourceFiles = await collectPublicSourceFiles();
+for (const sourceFile of sourceFiles) {
+  assertNoLegacySourceIdentifiers(
+    await readFile(sourceFile, "utf8"),
+    sourceFile
+  );
 }
 
 const htmlFiles = await collectHtmlFiles(distDirectory);

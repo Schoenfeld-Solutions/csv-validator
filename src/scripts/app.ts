@@ -5,8 +5,8 @@ import type {
   DatevEditableContractDraft,
   DatevEditableFieldContractDraft,
   DatevFormatType,
-  DatevLiteDiagnostic,
-  DatevLiteValidationResult,
+  DatevDiagnostic,
+  DatevValidationResult,
   WorkerValidationRequest,
   WorkerValidationResponse,
 } from "../lib/datev/types";
@@ -177,7 +177,7 @@ const editableFieldTypes: readonly DatevFormatType[] = [
 const editableFormatExpressions: readonly DatevEditableFieldContractDraft["formatExpression"][] =
   ["", "TTMM", "TTMMJJJJ"];
 
-let latestResult: DatevLiteValidationResult | undefined;
+let latestResult: DatevValidationResult | undefined;
 let latestReport: DatevValidationReport | undefined;
 let latestPreview: DatevDataPreview | undefined;
 let latestFile: File | undefined;
@@ -420,7 +420,7 @@ worker.addEventListener(
 );
 
 const renderResult = (
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   preview: DatevDataPreview | undefined,
   contractSource: DatevContractSourceSummary | undefined
 ): void => {
@@ -489,7 +489,7 @@ const resetDataPreview = (): void => {
 };
 
 const renderDataPreviewGate = (
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   preview: DatevDataPreview | undefined
 ): void => {
   dataPreviewContent.replaceChildren();
@@ -528,7 +528,7 @@ enableDataPreviewButton.addEventListener("click", () => {
 });
 
 const renderEnabledDataPreview = (
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   preview: DatevDataPreview
 ): void => {
   dataPreviewContent.replaceChildren();
@@ -595,7 +595,7 @@ const appendHeaderCell = (row: HTMLTableRowElement, value: string): void => {
   row.append(cell);
 };
 
-const renderBadge = (result: DatevLiteValidationResult): void => {
+const renderBadge = (result: DatevValidationResult): void => {
   resultBadge.className = "result-badge";
   let label: keyof (typeof badgeLabels)["en"] = result.status;
   if (result.status === "valid" && result.summary.warningCount > 0) {
@@ -612,7 +612,7 @@ const renderBadge = (result: DatevLiteValidationResult): void => {
 };
 
 const renderMetadata = (
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   contractSource: DatevContractSourceSummary | undefined
 ): void => {
   setText(metaRecognition, result.format?.recognitionCode ?? "-");
@@ -655,7 +655,7 @@ const renderContractSourceWarning = (
 
 const renderValidationReport = (
   report: DatevValidationReport,
-  result: DatevLiteValidationResult
+  result: DatevValidationResult
 ): void => {
   reportGeneratedAt.textContent = `${copy.report.generatedAt}: ${formatDateTime(report.generatedAt)}`;
   reportIntro.textContent = copy.report.intro;
@@ -666,7 +666,7 @@ const renderValidationReport = (
 
 const renderReportFacts = (
   report: DatevValidationReport,
-  result: DatevLiteValidationResult
+  result: DatevValidationResult
 ): void => {
   reportFacts.replaceChildren();
   appendFact(reportFacts, copy.report.sourceAndPrivacy, result.source.name);
@@ -771,9 +771,7 @@ const renderReportActions = (
   }
 };
 
-const renderDiagnostics = (
-  diagnostics: readonly DatevLiteDiagnostic[]
-): void => {
+const renderDiagnostics = (diagnostics: readonly DatevDiagnostic[]): void => {
   diagnosticsBody.replaceChildren();
   if (diagnostics.length === 0) {
     const row = document.createElement("tr");
@@ -837,7 +835,7 @@ const formatDateTime = (isoValue: string): string =>
 
 const formatDiagnosticLocation = (
   diagnostic: Pick<
-    DatevLiteDiagnostic,
+    DatevDiagnostic,
     "column" | "fieldIndex" | "fieldName" | "line"
   >
 ): string => {
@@ -896,7 +894,7 @@ downloadHtmlReportButton.addEventListener("click", () => {
 
 const createHtmlReport = (
   report: DatevValidationReport,
-  result: DatevLiteValidationResult
+  result: DatevValidationResult
 ): string => `<!doctype html>
 <html lang="${locale}">
 <head>

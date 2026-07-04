@@ -1,11 +1,11 @@
 import { diagnostic } from "./diagnostics";
-import type { DatevLiteDiagnostic, ParsedCsv, ParsedCsvField } from "./types";
+import type { DatevDiagnostic, ParsedCsv, ParsedCsvField } from "./types";
 
 const DATEV_DELIMITER = ";";
 const DATEV_QUOTE = '"';
 
 export const parseDatevCsvContent = (content: string): ParsedCsv => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+  const diagnostics: DatevDiagnostic[] = [];
   const rows: ParsedCsvField[][] = [];
   let currentRow: ParsedCsvField[] = [];
   let currentValue = "";
@@ -22,7 +22,7 @@ export const parseDatevCsvContent = (content: string): ParsedCsv => {
   let quoteStartColumn = 1;
   let fatal = false;
 
-  const addDiagnostic = (item: DatevLiteDiagnostic): void => {
+  const addDiagnostic = (item: DatevDiagnostic): void => {
     diagnostics.push(item);
     fatal = true;
   };

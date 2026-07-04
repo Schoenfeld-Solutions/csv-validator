@@ -1,14 +1,14 @@
-import { DATEV_LITE_CONTRACT } from "./contracts.generated";
+import { DATEV_STRUCTURAL_CONTRACT } from "./contracts.generated";
 import { diagnostic } from "./diagnostics";
 import type {
   DatevContractRepository,
   DatevEditableContractDraft,
   DatevEditableFieldContractDraft,
   DatevFormatType,
-  DatevLiteFieldContract,
-  DatevLiteFieldRuleContract,
-  DatevLiteDiagnostic,
-  DatevLiteRecognitionContract,
+  DatevFieldContract,
+  DatevFieldRuleContract,
+  DatevDiagnostic,
+  DatevRecognitionContract,
   DatevMarker,
   DatevRecognitionCode,
 } from "./types";
@@ -27,8 +27,8 @@ export const BUILT_IN_CONTRACT_REPOSITORY: DatevContractRepository = {
     category: string,
     name: string,
     version: string
-  ): DatevLiteRecognitionContract | undefined =>
-    DATEV_LITE_CONTRACT.recognitions.find(
+  ): DatevRecognitionContract | undefined =>
+    DATEV_STRUCTURAL_CONTRACT.recognitions.find(
       (recognition) =>
         recognition.formatCategory === category &&
         recognition.formatName === name &&
@@ -36,16 +36,20 @@ export const BUILT_IN_CONTRACT_REPOSITORY: DatevContractRepository = {
     ),
   getFields: (
     recognitionCode: string
-  ): readonly DatevLiteFieldContract[] | undefined =>
-    DATEV_LITE_CONTRACT.fieldsByCode[recognitionCode as DatevRecognitionCode],
+  ): readonly DatevFieldContract[] | undefined =>
+    DATEV_STRUCTURAL_CONTRACT.fieldsByCode[
+      recognitionCode as DatevRecognitionCode
+    ],
   getRules: (
     recognitionCode: string
-  ): readonly DatevLiteFieldRuleContract[] | undefined =>
-    DATEV_LITE_CONTRACT.rulesByCode[recognitionCode as DatevRecognitionCode],
-  listRecognitions: (): readonly DatevLiteRecognitionContract[] =>
-    DATEV_LITE_CONTRACT.recognitions,
+  ): readonly DatevFieldRuleContract[] | undefined =>
+    DATEV_STRUCTURAL_CONTRACT.rulesByCode[
+      recognitionCode as DatevRecognitionCode
+    ],
+  listRecognitions: (): readonly DatevRecognitionContract[] =>
+    DATEV_STRUCTURAL_CONTRACT.recognitions,
   summary: {
-    contractCount: DATEV_LITE_CONTRACT.recognitions.length,
+    contractCount: DATEV_STRUCTURAL_CONTRACT.recognitions.length,
     kind: "built-in",
     label: "Built-in DATEV CSV contracts",
     overrideCount: 0,
@@ -98,7 +102,7 @@ export const createMixedContractRepository = (
       category: string,
       name: string,
       version: string
-    ): DatevLiteRecognitionContract | undefined => {
+    ): DatevRecognitionContract | undefined => {
       const signature = signatureFromParts(category, name, version);
       const uploadedRecognition = uploadedBySignature.get(signature);
       if (uploadedRecognition) return uploadedRecognition;
@@ -115,15 +119,15 @@ export const createMixedContractRepository = (
     },
     getFields: (
       recognitionCode: string
-    ): readonly DatevLiteFieldContract[] | undefined =>
+    ): readonly DatevFieldContract[] | undefined =>
       uploadedRepository.getFields(recognitionCode) ??
       builtInRepository.getFields(recognitionCode),
     getRules: (
       recognitionCode: string
-    ): readonly DatevLiteFieldRuleContract[] | undefined =>
+    ): readonly DatevFieldRuleContract[] | undefined =>
       uploadedRepository.getRules(recognitionCode) ??
       builtInRepository.getRules(recognitionCode),
-    listRecognitions: (): readonly DatevLiteRecognitionContract[] =>
+    listRecognitions: (): readonly DatevRecognitionContract[] =>
       mixedRecognitions,
     summary: {
       contractCount: mixedRecognitions.length,
@@ -141,7 +145,7 @@ export const createEditableContractDraft = (
   recognitionCode: string
 ): {
   readonly draft?: DatevEditableContractDraft;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 } => {
   const recognition = repository
     .listRecognitions()
@@ -228,7 +232,7 @@ export const createEditedSessionContractRepository = (
   draft: DatevEditableContractDraft
 ): {
   readonly repository?: DatevContractRepository;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 } => {
   const diagnostics = validateEditableContractDraft(draft);
   if (diagnostics.some((item) => item.severity === "error")) {
@@ -242,11 +246,11 @@ export const createEditedSessionContractRepository = (
       item.trim()
     ),
   };
-  const fields = draft.fields.map((field): DatevLiteFieldContract => ({
+  const fields = draft.fields.map((field): DatevFieldContract => ({
     caption: field.caption.trim(),
     fieldNumber: field.fieldNumber,
   }));
-  const rules = draft.fields.map((field): DatevLiteFieldRuleContract => ({
+  const rules = draft.fields.map((field): DatevFieldRuleContract => ({
     decimalPlaces: field.decimalPlaces,
     fieldNumber: field.fieldNumber,
     formatExpression: field.formatExpression,
@@ -262,7 +266,7 @@ export const createEditedSessionContractRepository = (
         category: string,
         name: string,
         version: string
-      ): DatevLiteRecognitionContract | undefined =>
+      ): DatevRecognitionContract | undefined =>
         recognition.formatCategory === category &&
         recognition.formatName === name &&
         recognition.formatVersion === version
@@ -289,19 +293,19 @@ export const SUPPORTED_FORMATS =
 
 export const getFields = (
   recognitionCode: string
-): readonly DatevLiteFieldContract[] =>
+): readonly DatevFieldContract[] =>
   BUILT_IN_CONTRACT_REPOSITORY.getFields(recognitionCode) ?? [];
 
 export const getRules = (
   recognitionCode: string
-): readonly DatevLiteFieldRuleContract[] =>
+): readonly DatevFieldRuleContract[] =>
   BUILT_IN_CONTRACT_REPOSITORY.getRules(recognitionCode) ?? [];
 
 export const findRecognitionBySignature = (
   category: string,
   name: string,
   version: string
-): DatevLiteRecognitionContract | undefined =>
+): DatevRecognitionContract | undefined =>
   BUILT_IN_CONTRACT_REPOSITORY.findRecognitionBySignature(
     category,
     name,
@@ -309,14 +313,12 @@ export const findRecognitionBySignature = (
   );
 
 export const isAllowedMarker = (
-  recognition: DatevLiteRecognitionContract,
+  recognition: DatevRecognitionContract,
   marker: string
 ): marker is DatevMarker =>
   recognition.allowedDatevMarkers.includes(marker as DatevMarker);
 
-const recognitionSignature = (
-  recognition: DatevLiteRecognitionContract
-): string =>
+const recognitionSignature = (recognition: DatevRecognitionContract): string =>
   signatureFromParts(
     recognition.formatCategory,
     recognition.formatName,
@@ -331,8 +333,8 @@ const signatureFromParts = (
 
 const validateEditableContractDraft = (
   draft: DatevEditableContractDraft
-): readonly DatevLiteDiagnostic[] => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+): readonly DatevDiagnostic[] => {
+  const diagnostics: DatevDiagnostic[] = [];
   if (draft.fields.length === 0) {
     diagnostics.push(
       diagnostic(

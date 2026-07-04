@@ -1,12 +1,12 @@
 import { diagnostic } from "./diagnostics";
-import type { CsvEncoding, DatevLiteDiagnostic } from "./types";
+import type { CsvEncoding, DatevDiagnostic } from "./types";
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export interface DecodeResult {
   readonly encoding: CsvEncoding;
   readonly content: string;
-  readonly diagnostics: readonly DatevLiteDiagnostic[];
+  readonly diagnostics: readonly DatevDiagnostic[];
 }
 
 export const detectAndDecodeBytes = (bytes: Uint8Array): DecodeResult => {

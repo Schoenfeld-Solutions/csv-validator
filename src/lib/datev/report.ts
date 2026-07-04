@@ -1,9 +1,9 @@
 import type {
   DatevContractSourceKind,
   DatevContractSourceSummary,
-  DatevLiteDiagnostic,
-  DatevLiteStatus,
-  DatevLiteValidationResult,
+  DatevDiagnostic,
+  DatevValidationStatus,
+  DatevValidationResult,
 } from "./types";
 
 export type ValidationReportSectionId =
@@ -36,7 +36,7 @@ export type ValidationReportRemediationCategory =
   | "unsupported-format"
   | "review-warning";
 
-export interface ValidationReportDiagnostic extends DatevLiteDiagnostic {
+export interface ValidationReportDiagnostic extends DatevDiagnostic {
   readonly remediationCategory: ValidationReportRemediationCategory;
   readonly section: ValidationReportSectionId;
 }
@@ -52,13 +52,13 @@ export interface ValidationReportSection {
 export interface DatevValidationReport {
   readonly schemaVersion: 1;
   readonly generatedAt: string;
-  readonly status: DatevLiteStatus;
+  readonly status: DatevValidationStatus;
   readonly contractSource: DatevContractSourceKind | "none";
   readonly contractSourceSummary?: DatevContractSourceSummary;
-  readonly source: DatevLiteValidationResult["source"];
-  readonly format: DatevLiteValidationResult["format"];
-  readonly csv: DatevLiteValidationResult["csv"];
-  readonly summary: DatevLiteValidationResult["summary"];
+  readonly source: DatevValidationResult["source"];
+  readonly format: DatevValidationResult["format"];
+  readonly csv: DatevValidationResult["csv"];
+  readonly summary: DatevValidationResult["summary"];
   readonly recommendedActions: readonly ValidationReportActionId[];
   readonly sections: readonly ValidationReportSection[];
 }
@@ -79,7 +79,7 @@ export const reportSectionOrder: readonly ValidationReportSectionId[] = [
 ];
 
 export const buildValidationReport = (
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   generatedAt = new Date().toISOString(),
   contractSource?: DatevContractSourceSummary
 ): DatevValidationReport => {
@@ -104,7 +104,7 @@ export const buildValidationReport = (
 };
 
 export const toReportDiagnostic = (
-  diagnostic: DatevLiteDiagnostic
+  diagnostic: DatevDiagnostic
 ): ValidationReportDiagnostic => {
   const section = getDiagnosticSection(diagnostic.code);
   return {
@@ -116,7 +116,7 @@ export const toReportDiagnostic = (
 
 const buildSection = (
   id: ValidationReportSectionId,
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   diagnostics: readonly ValidationReportDiagnostic[]
 ): ValidationReportSection => {
   const sectionDiagnostics = diagnostics.filter(
@@ -139,7 +139,7 @@ const buildSection = (
 
 const getSectionStatus = (
   id: ValidationReportSectionId,
-  result: DatevLiteValidationResult,
+  result: DatevValidationResult,
   errorCount: number,
   warningCount: number
 ): ValidationReportSectionStatus => {
@@ -161,7 +161,7 @@ const getSectionStatus = (
 };
 
 const getRecommendedActions = (
-  result: DatevLiteValidationResult
+  result: DatevValidationResult
 ): readonly ValidationReportActionId[] => {
   if (result.status === "unsupported") return ["unsupportedFormat"];
   if (result.summary.errorCount > 0) return ["fixErrors"];
@@ -192,7 +192,7 @@ const getDiagnosticSection = (code: string): ValidationReportSectionId => {
 };
 
 const getRemediationCategory = (
-  diagnostic: DatevLiteDiagnostic,
+  diagnostic: DatevDiagnostic,
   section: ValidationReportSectionId
 ): ValidationReportRemediationCategory => {
   if (diagnostic.severity === "warning") return "review-warning";

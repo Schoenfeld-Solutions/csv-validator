@@ -4,11 +4,11 @@ import { diagnostic, summarizeDiagnostics } from "./diagnostics";
 import type {
   CsvEncoding,
   DatevContractRepository,
-  DatevLiteDiagnostic,
-  DatevLiteFieldContract,
-  DatevLiteFieldRuleContract,
-  DatevLiteRecognitionContract,
-  DatevLiteValidationResult,
+  DatevDiagnostic,
+  DatevFieldContract,
+  DatevFieldRuleContract,
+  DatevRecognitionContract,
+  DatevValidationResult,
   DatevMarker,
   ParsedCsvField,
 } from "./types";
@@ -71,7 +71,7 @@ export interface ValidateDatevContentInput {
   readonly content: string;
   readonly encoding: CsvEncoding;
   readonly contractRepository?: DatevContractRepository;
-  readonly preflightDiagnostics?: readonly DatevLiteDiagnostic[];
+  readonly preflightDiagnostics?: readonly DatevDiagnostic[];
 }
 
 export const validateDatevContent = ({
@@ -81,17 +81,17 @@ export const validateDatevContent = ({
   preflightDiagnostics = [],
   sizeBytes,
   sourceName,
-}: ValidateDatevContentInput): DatevLiteValidationResult => {
+}: ValidateDatevContentInput): DatevValidationResult => {
   const safeName = safeSourceName(sourceName);
   const parsed = parseDatevCsvContent(content);
-  const diagnostics: DatevLiteDiagnostic[] = [
+  const diagnostics: DatevDiagnostic[] = [
     ...preflightDiagnostics,
     ...parsed.diagnostics,
   ];
   const rows = parsed.rows;
   const header = rows[0];
   const captions = rows[1];
-  let recognition: DatevLiteRecognitionContract | undefined;
+  let recognition: DatevRecognitionContract | undefined;
   let marker: DatevMarker | undefined;
   let fieldCount: number | undefined;
   let dataRecordCount = 0;
@@ -232,8 +232,8 @@ export const createRejectedResult = (
   sourceName: string,
   sizeBytes: number,
   encoding: CsvEncoding,
-  diagnostics: readonly DatevLiteDiagnostic[]
-): DatevLiteValidationResult => ({
+  diagnostics: readonly DatevDiagnostic[]
+): DatevValidationResult => ({
   csv: {
     dataRecordCount: 0,
     delimiter: ";",
@@ -254,9 +254,9 @@ export const createRejectedResult = (
 
 const determineStatus = (
   errorCount: number,
-  diagnostics: readonly DatevLiteDiagnostic[],
-  recognition: DatevLiteRecognitionContract | undefined
-): DatevLiteValidationResult["status"] => {
+  diagnostics: readonly DatevDiagnostic[],
+  recognition: DatevRecognitionContract | undefined
+): DatevValidationResult["status"] => {
   if (
     !recognition &&
     diagnostics.some((item) => item.code === "FORMAT_UNSUPPORTED")
@@ -280,7 +280,7 @@ const parseMarker = (value: string | undefined): DatevMarker | undefined =>
 const detectRecognition = (
   headerValues: readonly string[],
   contractRepository: DatevContractRepository
-): DatevLiteRecognitionContract | undefined =>
+): DatevRecognitionContract | undefined =>
   contractRepository.findRecognitionBySignature(
     headerValues[HEADER_CATEGORY_INDEX] ?? "",
     headerValues[HEADER_NAME_INDEX] ?? "",
@@ -289,10 +289,10 @@ const detectRecognition = (
 
 const validateHeader = (
   header: readonly ParsedCsvField[],
-  recognition: DatevLiteRecognitionContract | undefined,
+  recognition: DatevRecognitionContract | undefined,
   marker: DatevMarker | undefined
-): DatevLiteDiagnostic[] => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+): DatevDiagnostic[] => {
+  const diagnostics: DatevDiagnostic[] = [];
   const headerValues = values(header);
 
   if (!marker) {
@@ -405,7 +405,7 @@ const validateRequiredNumber = (
   value: string | undefined,
   fieldName: string,
   fieldIndex: number,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): void => {
   if (!value) {
     diagnostics.push(
@@ -440,7 +440,7 @@ const validateRequiredNumber = (
 
 const validateFiscalYearStart = (
   value: string | undefined,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): void => {
   if (!value) {
     diagnostics.push(
@@ -462,7 +462,7 @@ const validateFiscalYearStart = (
 
 const validateAccountLength = (
   value: string | undefined,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): void => {
   if (!value) {
     diagnostics.push(
@@ -511,7 +511,7 @@ const validateOptionalHeaderDate = (
   value: string | undefined,
   fieldName: string,
   fieldIndex: number,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): Date | undefined => {
   if (!value) return undefined;
   return validateHeaderDate(value, fieldName, fieldIndex, diagnostics);
@@ -521,7 +521,7 @@ const validateHeaderDate = (
   value: string,
   fieldName: string,
   fieldIndex: number,
-  diagnostics: DatevLiteDiagnostic[]
+  diagnostics: DatevDiagnostic[]
 ): Date | undefined => {
   if (!/^[0-9]{8}$/.test(value)) {
     diagnostics.push(
@@ -561,10 +561,10 @@ const validateHeaderDate = (
 
 const validateCaptions = (
   captions: readonly ParsedCsvField[],
-  fields: readonly DatevLiteFieldContract[],
-  recognition: DatevLiteRecognitionContract
-): DatevLiteDiagnostic[] => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+  fields: readonly DatevFieldContract[],
+  recognition: DatevRecognitionContract
+): DatevDiagnostic[] => {
+  const diagnostics: DatevDiagnostic[] = [];
   if (captions.length !== fields.length) {
     diagnostics.push(
       diagnostic(
@@ -615,12 +615,12 @@ const validateCaptions = (
 
 const validateDataRow = (
   row: readonly ParsedCsvField[],
-  fields: readonly DatevLiteFieldContract[],
-  rules: readonly DatevLiteFieldRuleContract[],
+  fields: readonly DatevFieldContract[],
+  rules: readonly DatevFieldRuleContract[],
   recognitionCode: string,
   line: number
-): DatevLiteDiagnostic[] => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+): DatevDiagnostic[] => {
+  const diagnostics: DatevDiagnostic[] = [];
   if (row.length !== fields.length) {
     diagnostics.push(
       diagnostic(
@@ -645,12 +645,12 @@ const validateDataRow = (
 
 const validateCell = (
   cell: ParsedCsvField,
-  field: DatevLiteFieldContract,
-  rule: DatevLiteFieldRuleContract,
+  field: DatevFieldContract,
+  rule: DatevFieldRuleContract,
   recognitionCode: string,
   line: number
-): DatevLiteDiagnostic[] => {
-  const diagnostics: DatevLiteDiagnostic[] = [];
+): DatevDiagnostic[] => {
+  const diagnostics: DatevDiagnostic[] = [];
   const common = {
     fieldIndex: field.fieldNumber,
     fieldName: field.caption,
@@ -701,7 +701,7 @@ const validateCell = (
 
 const validateValue = (
   value: string,
-  rule: DatevLiteFieldRuleContract,
+  rule: DatevFieldRuleContract,
   runtimeRule?: RuntimeRule
 ): { code: string; message: string } | undefined => {
   if (runtimeRule === "paymentTermsPercent") {
@@ -754,7 +754,7 @@ const validateValue = (
 
 const validateAccount = (
   value: string,
-  rule: DatevLiteFieldRuleContract
+  rule: DatevFieldRuleContract
 ): { code: string; message: string } | undefined => {
   if (!/^[0-9]+$/.test(value)) {
     return {
@@ -773,7 +773,7 @@ const validateAccount = (
 
 const validateDecimal = (
   value: string,
-  rule: DatevLiteFieldRuleContract,
+  rule: DatevFieldRuleContract,
   allowSign: boolean
 ): { code: string; message: string } | undefined => {
   let unsigned = value;
@@ -835,7 +835,7 @@ const validateDecimal = (
 
 const validatePaymentTermsPercent = (
   value: string,
-  rule: DatevLiteFieldRuleContract
+  rule: DatevFieldRuleContract
 ): { code: string; message: string } | undefined => {
   if (value.startsWith("-")) {
     return {
@@ -898,7 +898,7 @@ const getRuntimeRule = (
 
 const validateDateValue = (
   value: string,
-  rule: DatevLiteFieldRuleContract
+  rule: DatevFieldRuleContract
 ): { code: string; message: string } | undefined => {
   if (rule.formatExpression === "TTMM") {
     if (!/^[0-9]{4}$/.test(value)) {

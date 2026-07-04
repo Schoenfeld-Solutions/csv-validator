@@ -1,11 +1,11 @@
 // Generated from local structural DATEV CSV contract facts.
 // Normalized structure facts only: no DATEV raw XML, ZIP, EXE, report, UI message, or raw rule strings.
 
-import type { DatevLiteContract } from "./types";
+import type { DatevStructuralContract } from "./types";
 
-export const DATEV_LITE_CONTRACT_VERSION = 1;
+export const DATEV_STRUCTURAL_CONTRACT_VERSION = 1;
 
-export const DATEV_LITE_CONTRACT = {
+export const DATEV_STRUCTURAL_CONTRACT = {
   schemaVersion: 1,
   recognitions: [
     {
@@ -14542,4 +14542,4 @@ export const DATEV_LITE_CONTRACT = {
       },
     ],
   },
-} as const satisfies DatevLiteContract;
+} as const satisfies DatevStructuralContract;
