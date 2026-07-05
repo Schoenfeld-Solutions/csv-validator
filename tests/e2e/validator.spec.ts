@@ -1076,6 +1076,16 @@ test("rejects invalid session-local contract edits without replacing the active 
   expect(copiedJson).not.toContain("EDIT_CONTRACT_MAX_LENGTH");
   expect(copiedJson).not.toContain("Kasse lang");
 
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(jsonReport).toContain("FIELD_TEXT_MAX_LENGTH");
+  expect(jsonReport).not.toContain("EDIT_CONTRACT_MAX_LENGTH");
+  expect(jsonReport).not.toContain("Kasse lang");
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
