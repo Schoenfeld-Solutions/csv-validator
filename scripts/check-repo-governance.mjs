@@ -110,9 +110,15 @@ const validatePagesWorkflow = async () => {
     "actions/configure-pages@v6",
     "actions/upload-pages-artifact@v5",
     "actions/deploy-pages@v5",
+    "continue-on-error: true",
+    "Retry GitHub Pages deployment",
+    "id: deployment_retry",
+    "if: steps.deployment.outcome == 'failure'",
+    "if: github.ref == 'refs/heads/main'",
     "id-token: write",
     "pages: write",
     "environment:",
+    "steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url",
     "github-pages",
   ]) {
     requireSnippet(path, text, snippet);
