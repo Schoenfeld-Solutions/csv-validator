@@ -2469,6 +2469,8 @@ test("creates a structured report for unsupported local CSV files", async ({
   await expect(
     page.getByRole("heading", { name: "Structured validation report" })
   ).toBeVisible();
+  await expect(page.locator("#reportFacts")).toContainText("Validation result");
+  await expect(page.locator("#reportFacts")).toContainText("Unsupported");
   await expect(page.locator("#reportFacts")).toContainText("File size");
   await expect(page.locator("#reportFacts")).toContainText(expectedFileSize);
   await expect(page.locator("#reportFacts")).toContainText(
@@ -2532,6 +2534,8 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
   expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("Validation result");
+  expect(htmlReport).toContain("Unsupported");
   expect(htmlReport).toContain("File size");
   expect(htmlReport).toContain(expectedFileSize);
   expect(htmlReport).toContain("Errors and warnings");
