@@ -2479,6 +2479,10 @@ test("creates a structured report for unsupported local CSV files", async ({
   await expect(page.locator("#reportFacts")).toContainText(
     expectedDiagnosticSummary
   );
+  await expect(page.locator("#reportFacts")).toContainText("Delimiter");
+  await expect(page.locator("#reportFacts")).toContainText(";");
+  await expect(page.locator("#reportFacts")).toContainText("Text qualifier");
+  await expect(page.locator("#reportFacts")).toContainText('"');
   await expect(page.getByText("Unsupported checks")).toBeVisible();
   await expect(page.getByText("Not run").first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText("preview-secret");
@@ -2540,6 +2544,10 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).toContain(expectedFileSize);
   expect(htmlReport).toContain("Errors and warnings");
   expect(htmlReport).toContain(expectedDiagnosticSummary);
+  expect(htmlReport).toContain("Delimiter");
+  expect(htmlReport).toContain("<dd>;</dd>");
+  expect(htmlReport).toContain("Text qualifier");
+  expect(htmlReport).toContain("<dd>&quot;</dd>");
   expect(htmlReport).toContain("Recommended next actions");
   expect(htmlReport).toContain(
     "Check the format version or use a later custom-contract mode."
