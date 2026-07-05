@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 import {
@@ -65,6 +65,83 @@ const expectHtmlReportToBeLocalOnly = (htmlReport: string): void => {
   expect(htmlReport).not.toMatch(
     /\b(?:gtag\s*\(|googletagmanager|google-analytics|plausible\.io|analytics\.js)\b/i
   );
+};
+
+const dropCsvOnValidator = async (
+  page: Page,
+  content: string,
+  name: string
+): Promise<void> => {
+  await page.evaluate(
+    ({ csvContent, fileName }) => {
+      const dropzone = document.getElementById("dropzone");
+      if (!dropzone) throw new Error("dropzone missing");
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(
+        new File([csvContent], fileName, { type: "text/csv" })
+      );
+      dropzone.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer,
+        })
+      );
+    },
+    { csvContent: content, fileName: name }
+  );
+};
+
+const expectBuiltInFallbackExportsSafe = async (
+  page: Page,
+  forbiddenValues: readonly string[]
+): Promise<void> => {
+  await expect(
+    page.getByText(
+      "Unsupported by the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaRecognition")).toHaveText("-");
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in local contracts"
+  );
+  for (const forbiddenValue of forbiddenValues) {
+    await expect(page.locator("body")).not.toContainText(forbiddenValue);
+  }
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("FORMAT_UNSUPPORTED");
+  expect(copiedJson).not.toContain("datev-format-contracts");
+  for (const forbiddenValue of forbiddenValues) {
+    expect(copiedJson).not.toContain(forbiddenValue);
+  }
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("Built-in local contracts");
+  expect(htmlReport).not.toContain("datev-format-contracts");
+  for (const forbiddenValue of forbiddenValues) {
+    expect(htmlReport).not.toContain(forbiddenValue);
+  }
 };
 
 test("root redirects German browser locale to German validator", async ({
@@ -1109,6 +1186,109 @@ test("clears loaded XML contracts after XML upload size-limit rejection", async 
   expect(htmlReport).not.toContain("raw-size-limit-secret-v1");
   expect(htmlReport).not.toContain("custom-hidden-value");
   expect(htmlReport).not.toContain("datev-format-contracts");
+});
+
+test("clears loaded XML contracts after XML contract set-limit rejection", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "valid-contract-before-set-limit-reject.xml",
+  });
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+
+  await dropCsvOnValidator(
+    page,
+    validCustomContractCsv(),
+    "before-set-limit-reject.csv"
+  );
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "synthetic-format-v1"
+  );
+
+  const rawCountSecret = "raw-xml-count-limit-secret-value";
+  await page.locator("#xmlContractInput").setInputFiles(
+    Array.from({ length: 21 }, (_, index) => ({
+      buffer: Buffer.from(
+        validCustomContractXml({
+          formatCategory: String(910 + index),
+          formatName: `${rawCountSecret}-${index}`,
+          recognitionCode: `raw-count-limit-secret-v${index}`,
+        }),
+        "utf8"
+      ),
+      mimeType: "application/xml",
+      name: `too-many-after-custom-${index}.xml`,
+    }))
+  );
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_FILE_LIMIT"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(rawCountSecret);
+
+  await dropCsvOnValidator(
+    page,
+    validCustomContractCsv(),
+    "after-count-limit-reject.csv"
+  );
+  await expectBuiltInFallbackExportsSafe(page, [
+    rawCountSecret,
+    "raw-count-limit-secret-v",
+    "custom-hidden-value",
+  ]);
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "valid-contract-before-total-limit-reject.xml",
+  });
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "synthetic-format-v1"
+  );
+
+  const rawTotalSecret = "raw-xml-total-limit-secret-value";
+  await page.locator("#xmlContractInput").setInputFiles(
+    Array.from({ length: 11 }, (_, index) => ({
+      buffer: Buffer.concat([
+        Buffer.from(
+          validCustomContractXml({
+            formatCategory: String(950 + index),
+            formatName: `${rawTotalSecret}-${index}`,
+            recognitionCode: `raw-total-limit-secret-v${index}`,
+          }),
+          "utf8"
+        ),
+        Buffer.alloc(1024 * 1024, "x"),
+      ]),
+      mimeType: "application/xml",
+      name: `total-limit-after-custom-${index}.xml`,
+    }))
+  );
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_SET_TOO_LARGE"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(rawTotalSecret);
+
+  await dropCsvOnValidator(
+    page,
+    validCustomContractCsv(),
+    "after-total-limit-reject.csv"
+  );
+  await expectBuiltInFallbackExportsSafe(page, [
+    rawCountSecret,
+    "raw-count-limit-secret-v",
+    rawTotalSecret,
+    "raw-total-limit-secret-v",
+    "custom-hidden-value",
+  ]);
 });
 
 test("rejects non-XML contract filenames before interpretation", async ({
