@@ -999,6 +999,96 @@ test("applies and discards a session-local contract edit without exposing raw va
   ).toBeVisible();
 });
 
+test("rejects invalid session-local contract edits without replacing the active edit", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await dropCsvOnValidator(
+    page,
+    validGlAccountDescriptionCsv(),
+    "invalid-edit-session.csv"
+  );
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Create editable copy" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Edit local contract copy" })
+  ).toBeVisible();
+
+  await page.locator("#editableFieldMaxLength-4").fill("4");
+  await page.getByRole("button", { name: "Apply session edit" }).click();
+
+  await expect(page.locator("#contractSourceSelect")).toHaveValue(
+    "edited-session"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Edited session contract"
+  );
+  await expect(
+    page.getByText(
+      "Invalid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#diagnosticsBody")).toContainText(
+    "FIELD_TEXT_MAX_LENGTH"
+  );
+
+  await page.locator("#editableFieldMaxLength-4").fill("-1");
+  await page.getByRole("button", { name: "Apply session edit" }).click();
+
+  await expect(page.locator("#contractEditorStatus")).toContainText(
+    "EDIT_CONTRACT_MAX_LENGTH"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue(
+    "edited-session"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Edited session contract"
+  );
+  await expect(page.locator("#diagnosticsBody")).toContainText(
+    "FIELD_TEXT_MAX_LENGTH"
+  );
+  await expect(page.locator("body")).not.toContainText("Kasse lang");
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __invalidEditJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__invalidEditJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () =>
+      (window as Window & { __invalidEditJson?: string }).__invalidEditJson ??
+      ""
+  );
+  expect(copiedJson).toContain("FIELD_TEXT_MAX_LENGTH");
+  expect(copiedJson).not.toContain("EDIT_CONTRACT_MAX_LENGTH");
+  expect(copiedJson).not.toContain("Kasse lang");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("Edited session contract");
+  expect(htmlReport).toContain("FIELD_TEXT_MAX_LENGTH");
+  expect(htmlReport).not.toContain("EDIT_CONTRACT_MAX_LENGTH");
+  expect(htmlReport).not.toContain("Kasse lang");
+});
+
 test("rejects oversized XML contracts before interpretation", async ({
   page,
 }) => {
