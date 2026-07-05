@@ -715,6 +715,21 @@ const renderReportFacts = (
   appendFact(reportFacts, copy.metadata.quote, result.csv.quote);
   appendFact(
     reportFacts,
+    copy.metadata.rows,
+    String(result.csv.physicalLineCount)
+  );
+  appendFact(
+    reportFacts,
+    copy.metadata.dataRows,
+    String(result.csv.dataRecordCount)
+  );
+  appendFact(
+    reportFacts,
+    copy.metadata.fields,
+    result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount)
+  );
+  appendFact(
+    reportFacts,
     copy.report.sections.contract,
     copy.report.contractSource[report.contractSource]
   );

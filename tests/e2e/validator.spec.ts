@@ -2483,6 +2483,15 @@ test("creates a structured report for unsupported local CSV files", async ({
   await expect(page.locator("#reportFacts")).toContainText(";");
   await expect(page.locator("#reportFacts")).toContainText("Text qualifier");
   await expect(page.locator("#reportFacts")).toContainText('"');
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Rows\s*3$/ })
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Data rows\s*0$/ })
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Fields\s*-$/ })
+  ).toBeVisible();
   await expect(page.getByText("Unsupported checks")).toBeVisible();
   await expect(page.getByText("Not run").first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText("preview-secret");
@@ -2548,6 +2557,9 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).toContain("<dd>;</dd>");
   expect(htmlReport).toContain("Text qualifier");
   expect(htmlReport).toContain("<dd>&quot;</dd>");
+  expect(htmlReport).toContain("<dt>Rows</dt><dd>3</dd>");
+  expect(htmlReport).toContain("<dt>Data rows</dt><dd>0</dd>");
+  expect(htmlReport).toContain("<dt>Fields</dt><dd>-</dd>");
   expect(htmlReport).toContain("Recommended next actions");
   expect(htmlReport).toContain(
     "Check the format version or use a later custom-contract mode."
