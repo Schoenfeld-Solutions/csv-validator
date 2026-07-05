@@ -483,6 +483,34 @@ test("keeps report export controls disabled until validation completes", async (
   await expect(htmlButton).toBeDisabled();
 });
 
+test("validates a local CSV selected with the file picker", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#fileInput").setInputFiles({
+    buffer: Buffer.from(validGlAccountDescriptionCsv(), "utf8"),
+    mimeType: "text/csv",
+    name: "picker-accounts.csv",
+  });
+
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "datev-gl-account-description-v3"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in local contracts"
+  );
+  await expect(page.locator("#statusLine")).toContainText(
+    "picker-accounts.csv processed locally in the browser."
+  );
+  await expect(page.locator("body")).not.toContainText("Kasse lang");
+});
+
 test("validates a dropped local CSV file and toggles theme", async ({
   page,
 }) => {
