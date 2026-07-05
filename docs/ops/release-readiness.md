@@ -45,6 +45,15 @@ Pushes to `main` build and publish the static Astro site through the Pages
 workflow. The workflow runs the same `npm run preflight` gate before packaging
 and deployment.
 
+The deploy job runs only for `refs/heads/main`. Manual `workflow_dispatch` runs
+from other branches may exercise preflight and packaging without publishing
+unmerged content. The deploy job retries `actions/deploy-pages` once inside the
+same workflow run when the first deployment attempt fails. This is intended
+only for transient GitHub Pages deployment responses after a successful
+preflight and package step. If the retry also fails, the run is not
+release-ready and the deployment logs must be reviewed before the next slice
+starts.
+
 ## Rollback
 
 - Code, documentation, or workflow regressions are reverted through a revert PR
