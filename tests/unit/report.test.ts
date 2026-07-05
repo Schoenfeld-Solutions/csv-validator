@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildValidationReport,
   reportSectionOrder,
+  toReportDiagnostic,
 } from "../../src/lib/datev/report";
 import { validateDatevContent } from "../../src/lib/datev/validator";
 import {
@@ -66,6 +67,58 @@ describe("buildValidationReport", () => {
     expect(report.sections.map((section) => section.id)).toEqual(
       reportSectionOrder
     );
+  });
+
+  it("maps diagnostic code families to deterministic report sections and remediation", () => {
+    const cases = [
+      ["FILE_TOO_LARGE", "error", "source", "fix-source"],
+      ["ENCODING_UNSUPPORTED", "error", "encodingCsv", "fix-encoding-or-csv"],
+      ["CSV_UNCLOSED_QUOTE", "error", "encodingCsv", "fix-encoding-or-csv"],
+      ["FORMAT_UNSUPPORTED", "warning", "recognition", "review-warning"],
+      ["HEADER_MARKER", "error", "header", "fix-header"],
+      ["CAPTION_FIELD_COUNT", "error", "captions", "fix-captions"],
+      ["DATA_FIELD_COUNT", "error", "dataRows", "fix-data-rows"],
+      ["FIELD_REQUIRED", "error", "fieldSemantics", "fix-field-value"],
+      ["TEXT_QUOTE_UNESCAPED", "warning", "fieldSemantics", "review-warning"],
+      [
+        "XML_CONTRACT_ROOT_UNSUPPORTED",
+        "error",
+        "contract",
+        "unsupported-format",
+      ],
+      ["CONTRACT_SOURCE_OVERRIDE", "warning", "contract", "review-warning"],
+      [
+        "EDIT_CONTRACT_FIELD_MISSING",
+        "error",
+        "contract",
+        "unsupported-format",
+      ],
+      [
+        "SYNTHETIC_UNKNOWN_DIAGNOSTIC",
+        "error",
+        "unsupported",
+        "unsupported-format",
+      ],
+    ] as const;
+
+    for (const [
+      code,
+      severity,
+      expectedSection,
+      expectedRemediationCategory,
+    ] of cases) {
+      expect(
+        toReportDiagnostic({
+          code,
+          message: `Synthetic diagnostic for ${code}.`,
+          severity,
+        })
+      ).toMatchObject({
+        code,
+        remediationCategory: expectedRemediationCategory,
+        section: expectedSection,
+      });
+    }
   });
 
   it("builds a structured safe report from a valid result with warnings", () => {
