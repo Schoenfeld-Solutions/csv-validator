@@ -130,6 +130,18 @@ const expectBuiltInFallbackExportsSafe = async (
     expect(copiedJson).not.toContain(forbiddenValue);
   }
 
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
+  expect(jsonReport).not.toContain("datev-format-contracts");
+  for (const forbiddenValue of forbiddenValues) {
+    expect(jsonReport).not.toContain(forbiddenValue);
+  }
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
