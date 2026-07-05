@@ -171,4 +171,41 @@ describe("buildValidationReport", () => {
       section: "fieldSemantics",
     });
   });
+
+  it("routes unknown diagnostic codes to a failed unsupported review bucket", () => {
+    const validResult = validate(validGlAccountDescriptionCsv());
+    const result = {
+      ...validResult,
+      diagnostics: [
+        ...validResult.diagnostics,
+        {
+          code: "SYNTHETIC_UNKNOWN_DIAGNOSTIC",
+          message: "Synthetic unknown diagnostic for report bucket coverage.",
+          severity: "error",
+        },
+      ],
+      status: "invalid",
+      summary: {
+        errorCount: validResult.summary.errorCount + 1,
+        warningCount: validResult.summary.warningCount,
+      },
+    } satisfies DatevValidationResult;
+
+    const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z");
+    const unsupportedSection = sectionById(report, "unsupported");
+
+    expect(report.recommendedActions).toEqual(["fixErrors"]);
+    expect(unsupportedSection).toMatchObject({
+      errorCount: 1,
+      status: "failed",
+      warningCount: 0,
+    });
+    expect(unsupportedSection?.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "SYNTHETIC_UNKNOWN_DIAGNOSTIC",
+        remediationCategory: "unsupported-format",
+        section: "unsupported",
+      })
+    );
+  });
 });
