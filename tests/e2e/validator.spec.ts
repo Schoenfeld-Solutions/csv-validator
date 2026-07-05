@@ -1007,6 +1007,92 @@ test("rejects non-XML contract filenames before interpretation", async ({
   );
 });
 
+test("rejects unsupported XML contract content without exposing raw values", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  const rawXmlSecret = "raw-xml-secret-value";
+  const unsupportedXml = [
+    '<datev-format-contracts version="1">',
+    `<unsupported-contract-shape secret="${rawXmlSecret}" />`,
+    "</datev-format-contracts>",
+  ].join("");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(unsupportedXml, "utf8"),
+    mimeType: "application/xml",
+    name: "unsupported-contract-shape.xml",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_NODE_UNSUPPORTED"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(rawXmlSecret);
+  await expect(page.locator("body")).not.toContainText(
+    "unsupported-contract-shape"
+  );
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "built-in-after-xml-rejection.csv", {
+        type: "text/csv",
+      })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validGlAccountDescriptionCsv());
+
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in local contracts"
+  );
+  await expect(page.locator("body")).not.toContainText(rawXmlSecret);
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("datev-gl-account-description-v3");
+  expect(copiedJson).not.toContain(rawXmlSecret);
+  expect(copiedJson).not.toContain("unsupported-contract-shape");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("Built-in local contracts");
+  expect(htmlReport).not.toContain(rawXmlSecret);
+  expect(htmlReport).not.toContain("unsupported-contract-shape");
+});
+
 test("shows a warning when mixed XML contracts override built-in signatures", async ({
   page,
 }) => {
