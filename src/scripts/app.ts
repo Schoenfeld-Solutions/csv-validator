@@ -268,11 +268,10 @@ const syncContractSourceControl = (): void => {
   contractSourceSelect.value = activeContractSource;
 };
 
-const validateFile = (file: File): void => {
+const resetPendingValidationOutput = (): void => {
   latestResult = undefined;
   latestReport = undefined;
   latestPreview = undefined;
-  latestFile = file;
   isDataPreviewEnabled = false;
   copyJsonButton.disabled = true;
   downloadJsonButton.disabled = true;
@@ -282,6 +281,13 @@ const validateFile = (file: File): void => {
   resetDataPreview();
   selectResultTab("analysis");
   resultPanel.hidden = true;
+  contractSourceWarning.hidden = true;
+  contractSourceWarning.textContent = "";
+};
+
+const validateFile = (file: File): void => {
+  latestFile = file;
+  resetPendingValidationOutput();
   const displayName = safeBrowserFileName(file.name);
   statusLine.textContent =
     locale === "de"
@@ -304,6 +310,10 @@ xmlContractInput.addEventListener("change", () => {
   const files = Array.from(xmlContractInput.files ?? []);
   if (files.length === 0) return;
   xmlContractStatus.textContent = copy.contractSource.loading(files.length);
+  if (latestFile) {
+    resetPendingValidationOutput();
+    statusLine.textContent = copy.progress["read-xml-contracts"];
+  }
   const request: WorkerValidationRequest = {
     files,
     type: "load-contracts",
