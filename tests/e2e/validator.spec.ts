@@ -248,6 +248,148 @@ test("shows the opposite theme icon for the effective system theme", async ({
   await expect(page.locator(".theme-icon-moon")).toBeVisible();
 });
 
+test("keeps report export controls disabled until validation completes", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class PendingValidationWorker {
+      private readonly listeners = new Set<EventListener>();
+
+      constructor() {
+        (
+          window as Window & {
+            __completeValidation?: (sourceName?: string) => void;
+          }
+        ).__completeValidation = (sourceName = "pending.csv") => {
+          const event = new MessageEvent("message", {
+            data: {
+              result: {
+                csv: {
+                  dataRecordCount: 0,
+                  delimiter: ";",
+                  encoding: "utf-8-sig",
+                  fieldCount: 4,
+                  physicalLineCount: 2,
+                  quote: '"',
+                },
+                diagnostics: [],
+                format: {
+                  category: "20",
+                  dataKind: "master",
+                  marker: "EXTF",
+                  name: "Kontenbeschriftungen",
+                  recognitionCode: "datev-gl-account-description-v3",
+                  version: "3",
+                },
+                schemaVersion: 1,
+                source: {
+                  name: sourceName,
+                  processedInBrowser: true,
+                  sizeBytes: 128,
+                },
+                status: "valid",
+                summary: {
+                  errorCount: 0,
+                  warningCount: 0,
+                },
+              },
+              type: "result",
+            },
+          });
+          for (const listener of this.listeners) listener(event);
+        };
+      }
+
+      addEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.add(listener);
+      }
+
+      removeEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.delete(listener);
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as { readonly type?: string };
+        if (request.type !== "validate") return;
+        const event = new MessageEvent("message", {
+          data: { code: "read-file", type: "progress" },
+        });
+        for (const listener of this.listeners) listener(event);
+      }
+
+      terminate(): void {
+        this.listeners.clear();
+      }
+    }
+
+    Object.defineProperty(window, "Worker", {
+      configurable: true,
+      value: PendingValidationWorker,
+    });
+  });
+  await page.goto("/csv-validator/en/");
+
+  const copyButton = page.locator("#copyJsonButton");
+  const jsonButton = page.locator("#downloadJsonButton");
+  const htmlButton = page.locator("#downloadHtmlReportButton");
+
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "pending.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validGlAccountDescriptionCsv());
+
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __completeValidation?: (sourceName?: string) => void;
+      }
+    ).__completeValidation?.("pending.csv");
+  });
+
+  await expect(copyButton).toBeEnabled();
+  await expect(jsonButton).toBeEnabled();
+  await expect(htmlButton).toBeEnabled();
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "pending-second.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validGlAccountDescriptionCsv());
+
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+});
+
 test("validates a dropped local CSV file and toggles theme", async ({
   page,
 }) => {
