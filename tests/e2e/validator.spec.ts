@@ -2443,6 +2443,7 @@ test("creates a structured report for unsupported local CSV files", async ({
     csvLine(["preview-secret", "2"]),
   ].join("\r\n");
   const expectedFileSize = `${Buffer.byteLength(unsupportedCsv, "utf8")} B`;
+  const expectedDiagnosticSummary = "0 errors, 1 warnings";
 
   await page.evaluate((content) => {
     const dropzone = document.getElementById("dropzone");
@@ -2470,6 +2471,12 @@ test("creates a structured report for unsupported local CSV files", async ({
   ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText("File size");
   await expect(page.locator("#reportFacts")).toContainText(expectedFileSize);
+  await expect(page.locator("#reportFacts")).toContainText(
+    "Errors and warnings"
+  );
+  await expect(page.locator("#reportFacts")).toContainText(
+    expectedDiagnosticSummary
+  );
   await expect(page.getByText("Unsupported checks")).toBeVisible();
   await expect(page.getByText("Not run").first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText("preview-secret");
@@ -2527,6 +2534,8 @@ test("creates a structured report for unsupported local CSV files", async ({
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("File size");
   expect(htmlReport).toContain(expectedFileSize);
+  expect(htmlReport).toContain("Errors and warnings");
+  expect(htmlReport).toContain(expectedDiagnosticSummary);
   expect(htmlReport).toContain("Recommended next actions");
   expect(htmlReport).toContain(
     "Check the format version or use a later custom-contract mode."
