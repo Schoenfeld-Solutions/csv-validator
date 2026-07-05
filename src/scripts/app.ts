@@ -694,6 +694,14 @@ const renderReportFacts = (
     copy.metadata.fileSize,
     formatBytes(result.source.sizeBytes)
   );
+  appendFact(
+    reportFacts,
+    copy.diagnostics.title,
+    copy.diagnostics.summary(
+      result.summary.errorCount,
+      result.summary.warningCount
+    )
+  );
   appendFact(reportFacts, copy.metadata.encoding, result.csv.encoding);
   appendFact(
     reportFacts,
@@ -957,6 +965,7 @@ const createHtmlReport = (
       ${createFactHtml(copy.report.generatedAt, formatDateTime(report.generatedAt))}
       ${createFactHtml(copy.report.sourceAndPrivacy, result.source.name)}
       ${createFactHtml(copy.metadata.fileSize, formatBytes(result.source.sizeBytes))}
+      ${createFactHtml(copy.diagnostics.title, copy.diagnostics.summary(result.summary.errorCount, result.summary.warningCount))}
       ${createFactHtml(copy.metadata.encoding, result.csv.encoding)}
       ${createFactHtml(copy.metadata.rows, String(result.csv.physicalLineCount))}
       ${createFactHtml(copy.metadata.dataRows, String(result.csv.dataRecordCount))}
