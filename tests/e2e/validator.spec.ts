@@ -987,6 +987,130 @@ test("rejects XML contract count and set size limits before interpretation", asy
   );
 });
 
+test("clears loaded XML contracts after XML upload size-limit rejection", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "valid-contract-before-size-reject.xml",
+  });
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "before-size-reject.csv", {
+        type: "text/csv",
+      })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validCustomContractCsv());
+
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "synthetic-format-v1"
+  );
+
+  const rawSizeSecret = "raw-xml-size-limit-secret-value";
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.concat([
+      Buffer.from(
+        validCustomContractXml({
+          formatName: rawSizeSecret,
+          recognitionCode: "raw-size-limit-secret-v1",
+        }),
+        "utf8"
+      ),
+      Buffer.alloc(2 * 1024 * 1024 + 1, "x"),
+    ]),
+    mimeType: "application/xml",
+    name: "too-large-after-custom.xml",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_FILE_TOO_LARGE"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(rawSizeSecret);
+  await expect(page.locator("body")).not.toContainText(
+    "raw-size-limit-secret-v1"
+  );
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "after-size-reject.csv", {
+        type: "text/csv",
+      })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, validCustomContractCsv());
+
+  await expect(
+    page.getByText(
+      "Unsupported by the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaRecognition")).toHaveText("-");
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in local contracts"
+  );
+  await expect(page.locator("body")).not.toContainText(rawSizeSecret);
+  await expect(page.locator("body")).not.toContainText("custom-hidden-value");
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("FORMAT_UNSUPPORTED");
+  expect(copiedJson).not.toContain(rawSizeSecret);
+  expect(copiedJson).not.toContain("raw-size-limit-secret-v1");
+  expect(copiedJson).not.toContain("custom-hidden-value");
+  expect(copiedJson).not.toContain("datev-format-contracts");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("Built-in local contracts");
+  expect(htmlReport).not.toContain(rawSizeSecret);
+  expect(htmlReport).not.toContain("raw-size-limit-secret-v1");
+  expect(htmlReport).not.toContain("custom-hidden-value");
+  expect(htmlReport).not.toContain("datev-format-contracts");
+});
+
 test("rejects non-XML contract filenames before interpretation", async ({
   page,
 }) => {
