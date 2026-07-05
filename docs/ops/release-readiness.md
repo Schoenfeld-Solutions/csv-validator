@@ -53,6 +53,12 @@ Pages returns a transient deployment response after a successful preflight and
 package step. If the final attempt also fails, the run is not release-ready and
 the deployment logs must be reviewed before the next slice starts.
 
+The deploy attempts use `continue-on-error` so later retries can run. GitHub's
+job summary can therefore show an earlier deploy step as visually green even
+when its log contains `Deployment failed, try again later.` Treat the deploy
+logs as the source of truth: the release is ready only when one attempt reports
+success and the overall workflow run is green.
+
 ## Rollback
 
 - Code, documentation, or workflow regressions are reverted through a revert PR
