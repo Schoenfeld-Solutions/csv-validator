@@ -268,14 +268,18 @@ const syncContractSourceControl = (): void => {
   contractSourceSelect.value = activeContractSource;
 };
 
+const setReportExportControlsEnabled = (enabled: boolean): void => {
+  copyJsonButton.disabled = !enabled;
+  downloadJsonButton.disabled = !enabled;
+  downloadHtmlReportButton.disabled = !enabled;
+};
+
 const resetPendingValidationOutput = (): void => {
   latestResult = undefined;
   latestReport = undefined;
   latestPreview = undefined;
   isDataPreviewEnabled = false;
-  copyJsonButton.disabled = true;
-  downloadJsonButton.disabled = true;
-  downloadHtmlReportButton.disabled = true;
+  setReportExportControlsEnabled(false);
   createEditableContractButton.disabled = true;
   copyStatus.textContent = "";
   resetDataPreview();
@@ -354,6 +358,10 @@ applyEditableContractButton.addEventListener("click", () => {
   const draft = collectEditableDraft();
   if (!draft) return;
   contractEditorStatus.textContent = copy.contractEditor.applying;
+  if (latestResult) {
+    setReportExportControlsEnabled(false);
+    copyStatus.textContent = "";
+  }
   const request: WorkerValidationRequest = {
     draft,
     type: "save-editable-contract",
@@ -363,6 +371,9 @@ applyEditableContractButton.addEventListener("click", () => {
 
 discardEditableContractButton.addEventListener("click", () => {
   contractEditorStatus.textContent = copy.contractEditor.discarding;
+  if (latestFile) {
+    resetPendingValidationOutput();
+  }
   const request: WorkerValidationRequest = {
     type: "discard-editable-contract",
   };
@@ -437,9 +448,7 @@ const renderResult = (
   latestReport = buildValidationReport(result, undefined, contractSource);
   isDataPreviewEnabled = false;
   resultPanel.hidden = false;
-  copyJsonButton.disabled = false;
-  downloadJsonButton.disabled = false;
-  downloadHtmlReportButton.disabled = false;
+  setReportExportControlsEnabled(true);
   createEditableContractButton.disabled = result.format === undefined;
   statusLine.textContent = `${result.source.name} ${copy.processed}.`;
   renderBadge(result);
@@ -1035,6 +1044,9 @@ const handleEditableContractResponse = (
     contractEditorStatus.textContent = copy.contractEditor.rejected(
       codes.join(", ")
     );
+    if (latestResult && latestReport) {
+      setReportExportControlsEnabled(true);
+    }
     return;
   }
   if (!message.draft && codes.length === 0) {
