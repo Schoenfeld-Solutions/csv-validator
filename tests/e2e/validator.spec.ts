@@ -599,6 +599,173 @@ test("clears stale validation exports while XML contracts are loading", async ({
   );
 });
 
+test("clears stale validation exports while contract source revalidation is pending", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class PendingSourceSwitchWorker {
+      private readonly listeners = new Set<EventListener>();
+      private validationCount = 0;
+
+      addEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.add(listener);
+      }
+
+      removeEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.delete(listener);
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as {
+          readonly contractSource?: "built-in" | "mixed" | "uploaded";
+          readonly file?: File;
+          readonly type?: string;
+        };
+        if (request.type === "validate") {
+          const currentValidation = this.validationCount;
+          this.validationCount += 1;
+          if (currentValidation >= 2) {
+            queueMicrotask(() => {
+              this.emit({ code: "read-file", type: "progress" });
+            });
+            return;
+          }
+          const sourceName = request.file?.name ?? "source-switch.csv";
+          const contractSource =
+            request.contractSource === "mixed"
+              ? {
+                  contractCount: 1,
+                  kind: "mixed",
+                  label: "Built-in plus XML contracts",
+                  overrideCount: 0,
+                  warningCount: 0,
+                }
+              : {
+                  contractCount: 12,
+                  kind: "built-in",
+                  label: "Built-in local contracts",
+                  overrideCount: 0,
+                  warningCount: 0,
+                };
+          queueMicrotask(() => {
+            this.emit({
+              contractSource,
+              result: {
+                csv: {
+                  dataRecordCount: 1,
+                  delimiter: ";",
+                  encoding: "utf-8",
+                  fieldCount: 2,
+                  physicalLineCount: 3,
+                  quote: '"',
+                },
+                diagnostics: [],
+                format: {
+                  category: "20",
+                  dataKind: "master",
+                  marker: "EXTF",
+                  name: "Kontenbeschriftungen",
+                  recognitionCode: "datev-gl-account-description-v3",
+                  version: "3",
+                },
+                schemaVersion: 1,
+                source: {
+                  name: sourceName,
+                  processedInBrowser: true,
+                  sizeBytes: 128,
+                },
+                status: "valid",
+                summary: {
+                  errorCount: 0,
+                  warningCount: 0,
+                },
+              },
+              type: "result",
+            });
+          });
+          return;
+        }
+        if (request.type === "load-contracts") {
+          queueMicrotask(() => {
+            this.emit({
+              diagnostics: [],
+              mixedSummary: {
+                contractCount: 1,
+                kind: "mixed",
+                label: "Built-in plus XML contracts",
+                overrideCount: 0,
+                warningCount: 0,
+              },
+              summary: {
+                contractCount: 1,
+                kind: "uploaded",
+                label: "Loaded XML contracts",
+                overrideCount: 0,
+                warningCount: 0,
+              },
+              type: "contracts",
+            });
+          });
+        }
+      }
+
+      terminate(): void {
+        this.listeners.clear();
+      }
+
+      private emit(data: unknown): void {
+        const event = new MessageEvent("message", { data });
+        for (const listener of this.listeners) listener(event);
+      }
+    }
+
+    Object.defineProperty(window, "Worker", {
+      configurable: true,
+      value: PendingSourceSwitchWorker,
+    });
+  });
+  await page.goto("/csv-validator/en/");
+
+  const copyButton = page.locator("#copyJsonButton");
+  const jsonButton = page.locator("#downloadJsonButton");
+  const htmlButton = page.locator("#downloadHtmlReportButton");
+
+  await page.locator("#fileInput").setInputFiles({
+    buffer: Buffer.from(validGlAccountDescriptionCsv(), "utf8"),
+    mimeType: "text/csv",
+    name: "source-switch.csv",
+  });
+
+  await expect(page.locator("#resultPanel")).toBeVisible();
+  await expect(copyButton).toBeEnabled();
+  await expect(jsonButton).toBeEnabled();
+  await expect(htmlButton).toBeEnabled();
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "source-switch-contract.xml",
+  });
+
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in plus loaded XML contracts"
+  );
+  await expect(copyButton).toBeEnabled();
+  await expect(jsonButton).toBeEnabled();
+  await expect(htmlButton).toBeEnabled();
+
+  await page.locator("#contractSourceSelect").selectOption("built-in");
+
+  await expect(page.locator("#resultPanel")).toBeHidden();
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+  await expect(page.locator("#statusLine")).toHaveText(
+    "Reading file in the browser worker."
+  );
+});
+
 test("validates a local CSV selected with the file picker", async ({
   page,
 }) => {
