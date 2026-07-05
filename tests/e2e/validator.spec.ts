@@ -862,6 +862,11 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   expect(copiedJson).not.toContain("custom-hidden-value");
   expect(copiedJson).not.toContain("datev-format-contracts");
 
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("synthetic-format-v1");
+  expect(jsonReport).not.toContain("custom-hidden-value");
+  expect(jsonReport).not.toContain("datev-format-contracts");
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
@@ -1004,6 +1009,10 @@ test("applies and discards a session-local contract edit without exposing raw va
   );
   expect(copiedJson).toContain("FIELD_TEXT_MAX_LENGTH");
   expect(copiedJson).not.toContain("Kasse lang");
+
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("FIELD_TEXT_MAX_LENGTH");
+  expect(jsonReport).not.toContain("Kasse lang");
 
   await page.getByRole("button", { name: "Discard edit" }).click();
   await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
@@ -1867,6 +1876,30 @@ test("shows a warning when mixed XML contracts override built-in signatures", as
     "override built-in local contract data"
   );
   await expect(page.locator("body")).not.toContainText("override-hidden-value");
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __overrideJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__overrideJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __overrideJson?: string }).__overrideJson ?? ""
+  );
+  expect(copiedJson).toContain("custom-gl-account-description-v3");
+  expect(copiedJson).not.toContain("override-hidden-value");
+  expect(copiedJson).not.toContain("datev-format-contracts");
+
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("custom-gl-account-description-v3");
+  expect(jsonReport).not.toContain("override-hidden-value");
+  expect(jsonReport).not.toContain("datev-format-contracts");
 
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
