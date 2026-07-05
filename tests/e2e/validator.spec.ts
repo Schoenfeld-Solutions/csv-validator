@@ -2522,7 +2522,13 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
   expectHtmlReportToBeLocalOnly(htmlReport);
-  expect(htmlReport).toContain("Unsupported");
+  expect(htmlReport).toContain("Recommended next actions");
+  expect(htmlReport).toContain(
+    "Check the format version or use a later custom-contract mode."
+  );
+  expect(htmlReport).toContain("Unsupported checks");
+  expect(htmlReport).toContain('<span class="status failed">Failed</span>');
+  expect(htmlReport).toContain('<span class="status not-run">Not run</span>');
   expect(htmlReport).toContain("No supported local contract");
   expect(htmlReport).not.toContain("EXTF;");
   expect(htmlReport).not.toContain("preview-secret");
