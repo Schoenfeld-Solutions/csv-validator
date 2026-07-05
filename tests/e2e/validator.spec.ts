@@ -67,6 +67,15 @@ const expectHtmlReportToBeLocalOnly = (htmlReport: string): void => {
   );
 };
 
+const downloadJsonReport = async (page: Page): Promise<string> => {
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  return readFile(jsonPath ?? "", "utf8");
+};
+
 const dropCsvOnValidator = async (
   page: Page,
   content: string,
@@ -130,12 +139,7 @@ const expectBuiltInFallbackExportsSafe = async (
     expect(copiedJson).not.toContain(forbiddenValue);
   }
 
-  const jsonDownloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download JSON report" }).click();
-  const jsonDownload = await jsonDownloadPromise;
-  const jsonPath = await jsonDownload.path();
-  expect(jsonPath).toBeTruthy();
-  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  const jsonReport = await downloadJsonReport(page);
   expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
   expect(jsonReport).not.toContain("datev-format-contracts");
   for (const forbiddenValue of forbiddenValues) {
@@ -1286,6 +1290,13 @@ test("clears loaded XML contracts after XML upload size-limit rejection", async 
   expect(copiedJson).not.toContain("custom-hidden-value");
   expect(copiedJson).not.toContain("datev-format-contracts");
 
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
+  expect(jsonReport).not.toContain(rawSizeSecret);
+  expect(jsonReport).not.toContain("raw-size-limit-secret-v1");
+  expect(jsonReport).not.toContain("custom-hidden-value");
+  expect(jsonReport).not.toContain("datev-format-contracts");
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
@@ -1530,6 +1541,13 @@ test("clears loaded XML contracts after non-XML contract filename rejection", as
   expect(copiedJson).not.toContain("custom-hidden-value");
   expect(copiedJson).not.toContain("datev-format-contracts");
 
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
+  expect(jsonReport).not.toContain(rawFileTypeSecret);
+  expect(jsonReport).not.toContain("raw-filetype-secret-v1");
+  expect(jsonReport).not.toContain("custom-hidden-value");
+  expect(jsonReport).not.toContain("datev-format-contracts");
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
@@ -1617,6 +1635,11 @@ test("rejects unsupported XML contract content without exposing raw values", asy
   expect(copiedJson).toContain("datev-gl-account-description-v3");
   expect(copiedJson).not.toContain(rawXmlSecret);
   expect(copiedJson).not.toContain("unsupported-contract-shape");
+
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("datev-gl-account-description-v3");
+  expect(jsonReport).not.toContain(rawXmlSecret);
+  expect(jsonReport).not.toContain("unsupported-contract-shape");
 
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
@@ -1785,6 +1808,12 @@ test("clears loaded XML contracts after security-rejected XML content", async ({
   expect(copiedJson).not.toContain(rawSecuritySecret);
   expect(copiedJson).not.toContain("custom-hidden-value");
   expect(copiedJson).not.toContain("datev-format-contracts");
+
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
+  expect(jsonReport).not.toContain(rawSecuritySecret);
+  expect(jsonReport).not.toContain("custom-hidden-value");
+  expect(jsonReport).not.toContain("datev-format-contracts");
 
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
