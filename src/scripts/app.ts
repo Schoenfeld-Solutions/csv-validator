@@ -689,6 +689,11 @@ const renderReportFacts = (
 ): void => {
   reportFacts.replaceChildren();
   appendFact(reportFacts, copy.report.sourceAndPrivacy, result.source.name);
+  appendFact(
+    reportFacts,
+    copy.metadata.fileSize,
+    formatBytes(result.source.sizeBytes)
+  );
   appendFact(reportFacts, copy.metadata.encoding, result.csv.encoding);
   appendFact(
     reportFacts,
@@ -951,6 +956,7 @@ const createHtmlReport = (
     <dl>
       ${createFactHtml(copy.report.generatedAt, formatDateTime(report.generatedAt))}
       ${createFactHtml(copy.report.sourceAndPrivacy, result.source.name)}
+      ${createFactHtml(copy.metadata.fileSize, formatBytes(result.source.sizeBytes))}
       ${createFactHtml(copy.metadata.encoding, result.csv.encoding)}
       ${createFactHtml(copy.metadata.rows, String(result.csv.physicalLineCount))}
       ${createFactHtml(copy.metadata.dataRows, String(result.csv.dataRecordCount))}
