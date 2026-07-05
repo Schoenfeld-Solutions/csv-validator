@@ -208,6 +208,16 @@ const formatBytes = (bytes: number): string => {
 const safeBrowserFileName = (fileName: string): string =>
   fileName.split(/[\\/]/).pop()?.trim() || "selected-file";
 
+const getResultLabelKey = (
+  result: DatevValidationResult
+): keyof (typeof badgeLabels)["en"] =>
+  result.status === "valid" && result.summary.warningCount > 0
+    ? "warning"
+    : result.status;
+
+const formatResultStatus = (result: DatevValidationResult): string =>
+  badgeLabels[locale][getResultLabelKey(result)];
+
 const formatContractSource = (
   summary: DatevContractSourceSummary | undefined
 ): string => {
@@ -616,10 +626,7 @@ const appendHeaderCell = (row: HTMLTableRowElement, value: string): void => {
 
 const renderBadge = (result: DatevValidationResult): void => {
   resultBadge.className = "result-badge";
-  let label: keyof (typeof badgeLabels)["en"] = result.status;
-  if (result.status === "valid" && result.summary.warningCount > 0) {
-    label = "warning";
-  }
+  const label = getResultLabelKey(result);
   resultBadge.textContent = badgeLabels[locale][label];
   resultBadge.classList.add(`is-${label}`);
   resultStatement.textContent =
@@ -689,6 +696,7 @@ const renderReportFacts = (
 ): void => {
   reportFacts.replaceChildren();
   appendFact(reportFacts, copy.report.sourceAndPrivacy, result.source.name);
+  appendFact(reportFacts, copy.resultKicker, formatResultStatus(result));
   appendFact(
     reportFacts,
     copy.metadata.fileSize,
@@ -964,6 +972,7 @@ const createHtmlReport = (
     <dl>
       ${createFactHtml(copy.report.generatedAt, formatDateTime(report.generatedAt))}
       ${createFactHtml(copy.report.sourceAndPrivacy, result.source.name)}
+      ${createFactHtml(copy.resultKicker, formatResultStatus(result))}
       ${createFactHtml(copy.metadata.fileSize, formatBytes(result.source.sizeBytes))}
       ${createFactHtml(copy.diagnostics.title, copy.diagnostics.summary(result.summary.errorCount, result.summary.warningCount))}
       ${createFactHtml(copy.metadata.encoding, result.csv.encoding)}
