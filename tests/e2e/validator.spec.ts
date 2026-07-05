@@ -483,6 +483,122 @@ test("keeps report export controls disabled until validation completes", async (
   await expect(htmlButton).toBeDisabled();
 });
 
+test("clears stale validation exports while XML contracts are loading", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class PendingContractLoadWorker {
+      private readonly listeners = new Set<EventListener>();
+
+      addEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.add(listener);
+      }
+
+      removeEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.delete(listener);
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as {
+          readonly file?: File;
+          readonly type?: string;
+        };
+        if (request.type === "validate") {
+          const sourceName = request.file?.name ?? "previous.csv";
+          queueMicrotask(() => {
+            this.emit({
+              result: {
+                csv: {
+                  dataRecordCount: 1,
+                  delimiter: ";",
+                  encoding: "utf-8",
+                  fieldCount: 2,
+                  physicalLineCount: 3,
+                  quote: '"',
+                },
+                diagnostics: [],
+                format: {
+                  category: "20",
+                  dataKind: "master",
+                  marker: "EXTF",
+                  name: "Kontenbeschriftungen",
+                  recognitionCode: "datev-gl-account-description-v3",
+                  version: "3",
+                },
+                schemaVersion: 1,
+                source: {
+                  name: sourceName,
+                  processedInBrowser: true,
+                  sizeBytes: 128,
+                },
+                status: "valid",
+                summary: {
+                  errorCount: 0,
+                  warningCount: 0,
+                },
+              },
+              type: "result",
+            });
+          });
+          return;
+        }
+        if (request.type === "load-contracts") {
+          queueMicrotask(() => {
+            this.emit({ code: "read-xml-contracts", type: "progress" });
+          });
+        }
+      }
+
+      terminate(): void {
+        this.listeners.clear();
+      }
+
+      private emit(data: unknown): void {
+        const event = new MessageEvent("message", { data });
+        for (const listener of this.listeners) listener(event);
+      }
+    }
+
+    Object.defineProperty(window, "Worker", {
+      configurable: true,
+      value: PendingContractLoadWorker,
+    });
+  });
+  await page.goto("/csv-validator/en/");
+
+  const copyButton = page.locator("#copyJsonButton");
+  const jsonButton = page.locator("#downloadJsonButton");
+  const htmlButton = page.locator("#downloadHtmlReportButton");
+
+  await page.locator("#fileInput").setInputFiles({
+    buffer: Buffer.from(validGlAccountDescriptionCsv(), "utf8"),
+    mimeType: "text/csv",
+    name: "previous-result.csv",
+  });
+
+  await expect(page.locator("#resultPanel")).toBeVisible();
+  await expect(copyButton).toBeEnabled();
+  await expect(jsonButton).toBeEnabled();
+  await expect(htmlButton).toBeEnabled();
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "pending-contract.xml",
+  });
+
+  await expect(page.locator("#resultPanel")).toBeHidden();
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+  await expect(page.locator("#statusLine")).toHaveText(
+    "Reading local DATEV XML contracts."
+  );
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "Loading 1 XML file locally"
+  );
+});
+
 test("validates a local CSV selected with the file picker", async ({
   page,
 }) => {
