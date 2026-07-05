@@ -1156,6 +1156,87 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).not.toContain("preview-secret");
 });
 
+test("keeps malformed CSV preview values out of UI and exports", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  const malformedCsv = `${validGlAccountDescriptionCsv()}\r\n"lexing-secret-value`;
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "malformed.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, malformedCsv);
+
+  await expect(
+    page.getByText(
+      "Invalid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#diagnosticsBody")).toContainText(
+    "CSV_UNCLOSED_QUOTE"
+  );
+  await expect(page.locator("body")).not.toContainText("lexing-secret-value");
+
+  await page.getByRole("tab", { name: "Data" }).click();
+  await expect(page.locator("#dataPreviewStatus")).toContainText(
+    "CSV lexing failed; raw values are not displayed."
+  );
+  await expect(
+    page.getByRole("button", { name: "Show data preview" })
+  ).toBeDisabled();
+  await expect(page.locator("body")).not.toContainText("lexing-secret-value");
+
+  await page.getByRole("tab", { name: "Analysis" }).click();
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("CSV_UNCLOSED_QUOTE");
+  expect(copiedJson).not.toContain("lexing-secret-value");
+
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(jsonReport).toContain("CSV_UNCLOSED_QUOTE");
+  expect(jsonReport).not.toContain("lexing-secret-value");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("CSV_UNCLOSED_QUOTE");
+  expect(htmlReport).not.toContain("lexing-secret-value");
+});
+
 test("legal pages are available without placeholders", async ({ page }) => {
   const legalRoutes = [
     ["/csv-validator/de/datenschutz/", "Datenschutz", "de"],
