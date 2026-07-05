@@ -1518,6 +1518,60 @@ test("rejects unsupported XML contract content without exposing raw values", asy
   expect(htmlReport).not.toContain("unsupported-contract-shape");
 });
 
+test("clears loaded XML contracts after malformed XML contract content", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "valid-contract-before-malformed-reject.xml",
+  });
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+
+  await dropCsvOnValidator(
+    page,
+    validCustomContractCsv(),
+    "before-malformed-reject.csv"
+  );
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "synthetic-format-v1"
+  );
+
+  const rawMalformedSecret = "raw-xml-malformed-secret-value";
+  const malformedXml = [
+    '<datev-format-contracts version="1">',
+    `<contract recognitionCode="raw-malformed-secret-v1" formatCategory="99" formatName="${rawMalformedSecret}"`,
+  ].join("");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(malformedXml, "utf8"),
+    mimeType: "application/xml",
+    name: "malformed-after-custom.xml",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "XML_CONTRACT_MALFORMED"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("built-in");
+  await expect(page.locator("body")).not.toContainText(rawMalformedSecret);
+  await expect(page.locator("body")).not.toContainText(
+    "raw-malformed-secret-v1"
+  );
+
+  await dropCsvOnValidator(
+    page,
+    validCustomContractCsv(),
+    "after-malformed-reject.csv"
+  );
+  await expectBuiltInFallbackExportsSafe(page, [
+    rawMalformedSecret,
+    "raw-malformed-secret-v1",
+    "custom-hidden-value",
+  ]);
+});
+
 test("clears loaded XML contracts after security-rejected XML content", async ({
   page,
 }) => {
