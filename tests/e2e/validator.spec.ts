@@ -638,6 +638,9 @@ test("validates a dropped local CSV file and toggles theme", async ({
     objectUrlEvents?.created.map((item) => item.url)
   );
 
+  await page.getByRole("tab", { name: "Data" }).click();
+  await expect(page.getByRole("cell", { name: "Kasse lang" })).toBeVisible();
+
   await page.evaluate(
     (content) => {
       const dropzone = document.getElementById("dropzone");
@@ -660,6 +663,15 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("#metaRecognition")).toHaveText(
     "datev-gl-account-description-v3"
   );
+  await expect(page.getByRole("tab", { name: "Analysis" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await expect(page.getByRole("tab", { name: "Data" })).toHaveAttribute(
+    "aria-selected",
+    "false"
+  );
+  await expect(page.locator("body")).not.toContainText("Kasse lang");
   await page.getByRole("tab", { name: "Data" }).click();
   await expect(page.locator("body")).not.toContainText("Second hidden value");
   await expect(
