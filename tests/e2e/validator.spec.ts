@@ -394,6 +394,32 @@ test("validates a dropped local CSV file and toggles theme", async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "light" });
+  await page.addInitScript(() => {
+    const created: Array<{ size: number; type: string; url: string }> = [];
+    const revoked: string[] = [];
+    const originalCreateObjectUrl = URL.createObjectURL.bind(URL);
+    const originalRevokeObjectUrl = URL.revokeObjectURL.bind(URL);
+
+    Object.defineProperty(window, "__reportObjectUrlEvents", {
+      configurable: true,
+      value: { created, revoked },
+    });
+
+    URL.createObjectURL = (object: Blob | MediaSource): string => {
+      const url = originalCreateObjectUrl(object);
+      created.push({
+        size: object instanceof Blob ? object.size : -1,
+        type: object instanceof Blob ? object.type : "",
+        url,
+      });
+      return url;
+    };
+
+    URL.revokeObjectURL = (url: string): void => {
+      revoked.push(url);
+      originalRevokeObjectUrl(url);
+    };
+  });
   await page.goto("/csv-validator/en/");
 
   await page.evaluate((content) => {
@@ -480,6 +506,44 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expect(htmlReport).toContain("No upload");
   expect(htmlReport).toContain("datev-gl-account-description-v3");
   expect(htmlReport).not.toContain("Kasse lang");
+
+  await page.waitForFunction(() => {
+    const events = (
+      window as Window & {
+        __reportObjectUrlEvents?: {
+          created: readonly unknown[];
+          revoked: readonly unknown[];
+        };
+      }
+    ).__reportObjectUrlEvents;
+    return (
+      events !== undefined &&
+      events.created.length >= 2 &&
+      events.revoked.length >= 2
+    );
+  });
+  const objectUrlEvents = await page.evaluate(
+    () =>
+      (
+        window as Window & {
+          __reportObjectUrlEvents?: {
+            created: Array<{ size: number; type: string; url: string }>;
+            revoked: string[];
+          };
+        }
+      ).__reportObjectUrlEvents
+  );
+  expect(objectUrlEvents?.created.map((item) => item.type)).toEqual([
+    "application/json",
+    "text/html;charset=utf-8",
+  ]);
+  expect(
+    objectUrlEvents?.created.every((item) => item.url.startsWith("blob:"))
+  ).toBe(true);
+  expect(objectUrlEvents?.created.every((item) => item.size > 0)).toBe(true);
+  expect(objectUrlEvents?.revoked).toEqual(
+    objectUrlEvents?.created.map((item) => item.url)
+  );
 
   await page.evaluate(
     (content) => {
