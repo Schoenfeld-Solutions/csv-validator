@@ -711,6 +711,8 @@ const renderReportFacts = (
     )
   );
   appendFact(reportFacts, copy.metadata.encoding, result.csv.encoding);
+  appendFact(reportFacts, copy.metadata.delimiter, result.csv.delimiter);
+  appendFact(reportFacts, copy.metadata.quote, result.csv.quote);
   appendFact(
     reportFacts,
     copy.report.sections.contract,
@@ -976,6 +978,8 @@ const createHtmlReport = (
       ${createFactHtml(copy.metadata.fileSize, formatBytes(result.source.sizeBytes))}
       ${createFactHtml(copy.diagnostics.title, copy.diagnostics.summary(result.summary.errorCount, result.summary.warningCount))}
       ${createFactHtml(copy.metadata.encoding, result.csv.encoding)}
+      ${createFactHtml(copy.metadata.delimiter, result.csv.delimiter)}
+      ${createFactHtml(copy.metadata.quote, result.csv.quote)}
       ${createFactHtml(copy.metadata.rows, String(result.csv.physicalLineCount))}
       ${createFactHtml(copy.metadata.dataRows, String(result.csv.dataRecordCount))}
       ${createFactHtml(copy.metadata.fields, result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount))}
