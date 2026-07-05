@@ -1114,6 +1114,35 @@ test("creates a structured report for unsupported local CSV files", async ({
   ).toBeVisible();
 
   await page.getByRole("tab", { name: "Analysis" }).click();
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("FORMAT_UNSUPPORTED");
+  expect(copiedJson).not.toContain("EXTF;");
+  expect(copiedJson).not.toContain("preview-secret");
+
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
+  expect(jsonReport).not.toContain("EXTF;");
+  expect(jsonReport).not.toContain("preview-secret");
+
   const htmlDownloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download HTML report" }).click();
   const htmlDownload = await htmlDownloadPromise;
