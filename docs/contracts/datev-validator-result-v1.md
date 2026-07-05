@@ -28,8 +28,11 @@ Uploaded XML contract files are interpreted only as a constrained local
 structural contract subset. Files without a `.xml` name are rejected before
 parsing. A single safe leading XML declaration may be accepted, while DOCTYPE
 declarations, entities, external references, and arbitrary processing
-instructions remain unsupported before interpretation. Raw XML is not included
-in this result schema or generated HTML reports.
+instructions remain unsupported before interpretation. XML attributes may use
+single or double quotes and standard predefined or numeric character
+references. Raw ampersands, unsupported entity references, and invalid numeric
+character references fail closed. Raw XML is not included in this result schema
+or generated HTML reports.
 
 The browser worker may also return a session-local data preview payload for
 the current UI session. That preview is intentionally outside this JSON result

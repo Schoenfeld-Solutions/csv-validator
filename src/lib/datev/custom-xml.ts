@@ -153,14 +153,27 @@ const parseSupportedXml = (
 
   const parsed = parseXmlSubset(xmlWithoutDeclaration);
   if (!parsed.root) {
-    return {
-      diagnostics: [
+    diagnostics.push(
+      diagnostic(
+        "error",
+        "XML_CONTRACT_MALFORMED",
+        "The local DATEV XML contract could not be parsed."
+      )
+    );
+    if (parsed.unsupportedNode) {
+      diagnostics.push(
         diagnostic(
           "error",
-          "XML_CONTRACT_MALFORMED",
-          "The local DATEV XML contract could not be parsed."
-        ),
-      ],
+          "XML_CONTRACT_NODE_UNSUPPORTED",
+          "The local DATEV XML contract contains unsupported XML node syntax."
+        )
+      );
+    }
+    return {
+      diagnostics: diagnostics.map((item) => ({
+        ...item,
+        fieldName: item.fieldName ?? `xml-file-${fileIndex}`,
+      })),
     };
   }
   if (parsed.root.name !== SUPPORTED_ROOT) {
