@@ -1280,6 +1280,201 @@ test("rejects invalid session-local contract edits without replacing the active 
   expect(htmlReport).not.toContain("Kasse lang");
 });
 
+test("guards session edit exports while save or discard is pending", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    class PendingEditorWorker {
+      private readonly listeners = new Set<EventListener>();
+
+      addEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.add(listener);
+      }
+
+      removeEventListener(type: string, listener: EventListener): void {
+        if (type === "message") this.listeners.delete(listener);
+      }
+
+      postMessage(message: unknown): void {
+        const request = message as {
+          readonly draft?: {
+            readonly fields?: readonly { readonly maxLength?: number }[];
+          };
+          readonly file?: File;
+          readonly type?: string;
+        };
+        if (request.type === "validate") {
+          const sourceName = request.file?.name ?? "editable-pending.csv";
+          queueMicrotask(() => {
+            this.emit({
+              result: {
+                csv: {
+                  dataRecordCount: 1,
+                  delimiter: ";",
+                  encoding: "utf-8",
+                  fieldCount: 2,
+                  physicalLineCount: 3,
+                  quote: '"',
+                },
+                diagnostics: [],
+                format: {
+                  category: "20",
+                  dataKind: "master",
+                  marker: "EXTF",
+                  name: "Kontenbeschriftungen",
+                  recognitionCode: "datev-gl-account-description-v3",
+                  version: "3",
+                },
+                schemaVersion: 1,
+                source: {
+                  name: sourceName,
+                  processedInBrowser: true,
+                  sizeBytes: 128,
+                },
+                status: "valid",
+                summary: {
+                  errorCount: 0,
+                  warningCount: 0,
+                },
+              },
+              type: "result",
+            });
+          });
+          return;
+        }
+        if (request.type === "create-editable-contract") {
+          queueMicrotask(() => {
+            this.emit({
+              diagnostics: [],
+              draft: {
+                fields: [
+                  {
+                    caption: "Konto",
+                    decimalPlaces: 0,
+                    fieldNumber: 1,
+                    formatExpression: "",
+                    formatType: "Konto",
+                    maxLength: 9,
+                    necessary: true,
+                  },
+                  {
+                    caption: "Beschriftung",
+                    decimalPlaces: 0,
+                    fieldNumber: 2,
+                    formatExpression: "",
+                    formatType: "Text",
+                    maxLength: 40,
+                    necessary: true,
+                  },
+                ],
+                recognition: {
+                  allowedDatevMarkers: ["EXTF"],
+                  dataKind: "master",
+                  formatCategory: "20",
+                  formatName: "Kontenbeschriftungen",
+                  formatVersion: "3",
+                  recognitionCode: "datev-gl-account-description-v3",
+                  requiredCaptions: ["Konto", "Beschriftung"],
+                },
+              },
+              type: "editable-contract",
+            });
+          });
+          return;
+        }
+        if (request.type === "save-editable-contract") {
+          const hasInvalidField = request.draft?.fields?.some(
+            (field) => (field.maxLength ?? 0) < 0
+          );
+          if (hasInvalidField) {
+            queueMicrotask(() => {
+              this.emit({
+                diagnostics: [
+                  {
+                    code: "EDIT_CONTRACT_MAX_LENGTH",
+                    message: "The edited contract field max length is invalid.",
+                    severity: "error",
+                  },
+                ],
+                type: "editable-contract",
+              });
+            });
+          }
+          return;
+        }
+        if (request.type === "discard-editable-contract") {
+          return;
+        }
+      }
+
+      terminate(): void {
+        this.listeners.clear();
+      }
+
+      private emit(data: unknown): void {
+        const event = new MessageEvent("message", { data });
+        for (const listener of this.listeners) listener(event);
+      }
+    }
+
+    Object.defineProperty(window, "Worker", {
+      configurable: true,
+      value: PendingEditorWorker,
+    });
+  });
+  await page.goto("/csv-validator/en/");
+
+  const copyButton = page.locator("#copyJsonButton");
+  const jsonButton = page.locator("#downloadJsonButton");
+  const htmlButton = page.locator("#downloadHtmlReportButton");
+
+  await page.locator("#fileInput").setInputFiles({
+    buffer: Buffer.from(validGlAccountDescriptionCsv(), "utf8"),
+    mimeType: "text/csv",
+    name: "editable-pending.csv",
+  });
+
+  await expect(page.locator("#resultPanel")).toBeVisible();
+  await expect(copyButton).toBeEnabled();
+  await expect(jsonButton).toBeEnabled();
+  await expect(htmlButton).toBeEnabled();
+
+  await page.getByRole("button", { name: "Create editable copy" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Edit local contract copy" })
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Apply session edit" }).click();
+
+  await expect(page.locator("#resultPanel")).toBeVisible();
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+  await expect(page.locator("#contractEditorStatus")).toContainText(
+    "Checking edited session contract"
+  );
+
+  await page.locator("#editableFieldMaxLength-2").fill("-1");
+  await page.getByRole("button", { name: "Apply session edit" }).click();
+
+  await expect(page.locator("#contractEditorStatus")).toContainText(
+    "EDIT_CONTRACT_MAX_LENGTH"
+  );
+  await expect(copyButton).toBeEnabled();
+  await expect(jsonButton).toBeEnabled();
+  await expect(htmlButton).toBeEnabled();
+
+  await page.getByRole("button", { name: "Discard edit" }).click();
+
+  await expect(page.locator("#resultPanel")).toBeHidden();
+  await expect(copyButton).toBeDisabled();
+  await expect(jsonButton).toBeDisabled();
+  await expect(htmlButton).toBeDisabled();
+  await expect(page.locator("#contractEditorStatus")).toContainText(
+    "Discarding edited session contract"
+  );
+});
+
 test("rejects oversized XML contracts before interpretation", async ({
   page,
 }) => {
