@@ -152,11 +152,11 @@ const getSectionStatus = (
   if (result.status === "unsupported" && id === "recognition") {
     return "failed";
   }
-  if (id === "unsupported") {
-    return result.status === "unsupported" ? "failed" : "passed";
-  }
   if (errorCount > 0) return "failed";
   if (warningCount > 0) return "warning";
+  if (id === "unsupported" && result.status === "unsupported") {
+    return "failed";
+  }
   return "passed";
 };
 
