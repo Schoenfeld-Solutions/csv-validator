@@ -110,25 +110,69 @@ const parseAttributes = (
 ): Readonly<Record<string, string>> | undefined => {
   const attributes: Record<string, string> = {};
   let cursor = 0;
-  const attributePattern = /([A-Za-z][A-Za-z0-9_-]*)\s*=\s*"([^"]*)"/g;
+  const attributePattern = /([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(["'])(.*?)\2/gs;
   for (const match of attributesText.matchAll(attributePattern)) {
     const index = match.index ?? 0;
     if (attributesText.slice(cursor, index).trim() !== "") return undefined;
-    const [, name, value] = match;
-    if (!name || value === undefined || attributes[name] !== undefined) {
+    const [, name, , value] = match;
+    const decoded = value === undefined ? undefined : decodeXmlAttribute(value);
+    if (!name || decoded === undefined || attributes[name] !== undefined) {
       return undefined;
     }
-    attributes[name] = decodeXmlAttribute(value);
+    attributes[name] = decoded;
     cursor = index + match[0].length;
   }
   if (attributesText.slice(cursor).trim() !== "") return undefined;
   return attributes;
 };
 
-const decodeXmlAttribute = (value: string): string =>
-  value
-    .replaceAll("&quot;", '"')
-    .replaceAll("&apos;", "'")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&amp;", "&");
+const decodeXmlAttribute = (value: string): string | undefined => {
+  let decoded = "";
+  let cursor = 0;
+  const referencePattern = /&(quot|apos|lt|gt|amp|#x[0-9A-Fa-f]+|#[0-9]+);/g;
+
+  for (const match of value.matchAll(referencePattern)) {
+    const index = match.index ?? 0;
+    const text = value.slice(cursor, index);
+    if (text.includes("&")) return undefined;
+
+    const [, reference] = match;
+    const character = reference ? decodeXmlReference(reference) : undefined;
+    if (character === undefined) return undefined;
+
+    decoded += text + character;
+    cursor = index + match[0].length;
+  }
+
+  const trailingText = value.slice(cursor);
+  if (trailingText.includes("&")) return undefined;
+  return decoded + trailingText;
+};
+
+const decodeXmlReference = (reference: string): string | undefined => {
+  if (reference === "quot") return '"';
+  if (reference === "apos") return "'";
+  if (reference === "lt") return "<";
+  if (reference === "gt") return ">";
+  if (reference === "amp") return "&";
+
+  const codePoint = reference.startsWith("#x")
+    ? Number.parseInt(reference.slice(2), 16)
+    : reference.startsWith("#")
+      ? Number.parseInt(reference.slice(1), 10)
+      : Number.NaN;
+
+  if (!Number.isInteger(codePoint) || !isXmlCharacter(codePoint)) {
+    return undefined;
+  }
+
+  return String.fromCodePoint(codePoint);
+};
+
+const isXmlCharacter = (codePoint: number): boolean =>
+  codePoint === 0x9 ||
+  codePoint === 0xa ||
+  codePoint === 0xd ||
+  (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+  (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+  (codePoint >= 0x10000 && codePoint <= 0x10ffff);

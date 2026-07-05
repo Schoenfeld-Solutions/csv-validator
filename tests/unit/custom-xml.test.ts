@@ -146,6 +146,33 @@ describe("importDatevXmlContractSet", () => {
     ).toMatchObject({ recognitionCode: "synthetic-format-v1" });
   });
 
+  it("accepts single-quoted XML attributes and standard character references", () => {
+    const xml = [
+      "<datev-format-contracts version='1'>",
+      "<contract recognitionCode='synthetic-entity-v1' formatCategory='99' formatName='Synthetic &amp; Entity' formatVersion='1' markers='EXTF' requiredCaptions='Konto,Name &quot;kurz&quot; &amp; Nummer &#35;1' dataKind='synthetic'>",
+      "<field number='1' caption='Konto' type='Konto' maxLength='9' decimalPlaces='0' necessary='true' formatExpression='' />",
+      "<field number='2' caption='Name &quot;kurz&quot; &amp; Nummer &#35;1' type='Text' maxLength='30' decimalPlaces='0' necessary='true' formatExpression='' />",
+      "<field number='3' caption='Datum' type='Datum' maxLength='4' decimalPlaces='0' necessary='false' formatExpression='TTMM' />",
+      "</contract>",
+      "</datev-format-contracts>",
+    ].join("");
+
+    const imported = importDatevXmlContractSet([xml]);
+
+    expect(imported.diagnostics).toEqual([]);
+    expect(
+      imported.repository?.findRecognitionBySignature(
+        "99",
+        "Synthetic & Entity",
+        "1"
+      )
+    ).toMatchObject({ recognitionCode: "synthetic-entity-v1" });
+    expect(imported.repository?.getFields("synthetic-entity-v1")?.[1]).toEqual({
+      caption: 'Name "kurz" & Nummer #1',
+      fieldNumber: 2,
+    });
+  });
+
   it("validates CSV content against a synthetic custom contract repository", () => {
     const imported = importDatevXmlContractSet([validCustomContractXml()]);
     const repository = expectRepository(imported.repository);
@@ -345,6 +372,25 @@ describe("importDatevXmlContractSet", () => {
     );
 
     expect(diagnosticCodes(xml)).toContain("XML_CONTRACT_NODE_UNSUPPORTED");
+  });
+
+  it("rejects unsupported or raw XML attribute references fail-closed", () => {
+    for (const xml of [
+      validCustomContractXml().replace(
+        'formatName="Synthetic Format"',
+        'formatName="Synthetic &copy; Format"'
+      ),
+      validCustomContractXml().replace(
+        'formatName="Synthetic Format"',
+        'formatName="Synthetic & Format"'
+      ),
+      validCustomContractXml().replace(
+        'formatName="Synthetic Format"',
+        'formatName="Synthetic &#0; Format"'
+      ),
+    ]) {
+      expect(diagnosticCodes(xml)).toContain("XML_CONTRACT_NODE_UNSUPPORTED");
+    }
   });
 
   it("rejects entities, external references, and processing instructions before interpretation", () => {
