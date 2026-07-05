@@ -1237,6 +1237,93 @@ test("keeps malformed CSV preview values out of UI and exports", async ({
   expect(htmlReport).not.toContain("lexing-secret-value");
 });
 
+test("keeps no-data-row preview values out of UI and exports", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  const noDataRowsCsv = [
+    headerLine(),
+    csvLine(["1000", "no-data-secret-value", "de", "hidden long text"]),
+  ].join("\r\n");
+
+  await page.evaluate((content) => {
+    const dropzone = document.getElementById("dropzone");
+    if (!dropzone) throw new Error("dropzone missing");
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File([content], "no-data-rows.csv", { type: "text/csv" })
+    );
+    dropzone.dispatchEvent(
+      new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      })
+    );
+  }, noDataRowsCsv);
+
+  await expect(
+    page.getByText(
+      "Invalid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#diagnosticsBody")).toContainText("CAPTION_ORDER");
+  await expect(page.locator("body")).not.toContainText("no-data-secret-value");
+  await expect(page.locator("body")).not.toContainText("hidden long text");
+
+  await page.getByRole("tab", { name: "Data" }).click();
+  await expect(page.locator("#dataPreviewStatus")).toContainText(
+    "No data rows were found for a table view."
+  );
+  await expect(
+    page.getByRole("button", { name: "Show data preview" })
+  ).toBeDisabled();
+  await expect(page.locator("body")).not.toContainText("no-data-secret-value");
+  await expect(page.locator("body")).not.toContainText("hidden long text");
+
+  await page.getByRole("tab", { name: "Analysis" }).click();
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(copiedJson).toContain("CAPTION_ORDER");
+  expect(copiedJson).not.toContain("no-data-secret-value");
+  expect(copiedJson).not.toContain("hidden long text");
+
+  const jsonDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download JSON report" }).click();
+  const jsonDownload = await jsonDownloadPromise;
+  const jsonPath = await jsonDownload.path();
+  expect(jsonPath).toBeTruthy();
+  const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(jsonReport).toContain("CAPTION_ORDER");
+  expect(jsonReport).not.toContain("no-data-secret-value");
+  expect(jsonReport).not.toContain("hidden long text");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("CAPTION_ORDER");
+  expect(htmlReport).not.toContain("no-data-secret-value");
+  expect(htmlReport).not.toContain("hidden long text");
+});
+
 test("legal pages are available without placeholders", async ({ page }) => {
   const legalRoutes = [
     ["/csv-validator/de/datenschutz/", "Datenschutz", "de"],
