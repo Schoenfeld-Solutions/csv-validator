@@ -57,6 +57,16 @@ const overridingGlAccountCsv = (): string =>
     csvLine(["1000", "override-hidden-value", "0101"]),
   ].join("\r\n");
 
+const expectHtmlReportToBeLocalOnly = (htmlReport: string): void => {
+  expect(htmlReport).not.toMatch(/<script\b/i);
+  expect(htmlReport).not.toMatch(/<link\b[^>]+rel=["']?stylesheet/i);
+  expect(htmlReport).not.toMatch(/\s(?:href|src)=["'](?:https?:)?\/\//i);
+  expect(htmlReport).not.toMatch(/@import\s+url\(["']?(?:https?:)?\/\//i);
+  expect(htmlReport).not.toMatch(
+    /\b(?:gtag\s*\(|googletagmanager|google-analytics|plausible\.io|analytics\.js)\b/i
+  );
+};
+
 test("root redirects German browser locale to German validator", async ({
   browser,
 }) => {
@@ -323,6 +333,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("DATEV CSV Validator Report");
   expect(htmlReport).toContain("No upload");
   expect(htmlReport).toContain("datev-gl-account-description-v3");
@@ -402,6 +413,7 @@ test("rejects unsupported primary file names before reading content", async ({
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("FILE_TYPE_UNSUPPORTED");
   expect(htmlReport).not.toContain("primary-secret-value");
 });
@@ -478,6 +490,7 @@ test("escapes browser file names in downloaded HTML reports", async ({
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("report-&lt;img src=x onerror=alert(1)&gt;.csv");
   expect(htmlReport).not.toContain(fileName);
   expect(htmlReport).not.toContain("<img src=x");
@@ -556,6 +569,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("Built-in plus loaded XML contracts");
   expect(htmlReport).not.toContain("custom-hidden-value");
   expect(htmlReport).not.toContain("datev-format-contracts");
@@ -833,6 +847,7 @@ test("shows a warning when mixed XML contracts override built-in signatures", as
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("Override warning");
   expect(htmlReport).toContain("override built-in local contract data");
   expect(htmlReport).not.toContain("override-hidden-value");
@@ -899,6 +914,7 @@ test("creates a structured report for unsupported local CSV files", async ({
   const htmlPath = await htmlDownload.path();
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("Unsupported");
   expect(htmlReport).toContain("No supported local contract");
   expect(htmlReport).not.toContain("EXTF;");
