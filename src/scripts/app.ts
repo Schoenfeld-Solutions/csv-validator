@@ -764,6 +764,11 @@ const renderReportFacts = (
   appendFact(reportFacts, copy.metadata.marker, result.format?.marker ?? "-");
   appendFact(
     reportFacts,
+    copy.metadata.dataKind,
+    result.format?.dataKind ?? "-"
+  );
+  appendFact(
+    reportFacts,
     copy.metadata.recognition,
     result.format?.recognitionCode ?? "-"
   );
@@ -1027,6 +1032,7 @@ const createHtmlReport = (
       }
       ${createFactHtml(copy.metadata.format, formatRecognizedFormat(result))}
       ${createFactHtml(copy.metadata.marker, result.format?.marker ?? "-")}
+      ${createFactHtml(copy.metadata.dataKind, result.format?.dataKind ?? "-")}
       ${createFactHtml(copy.metadata.recognition, result.format?.recognitionCode ?? "-")}
     </dl>
     <h2>${escapeHtml(copy.report.nextActions)}</h2>
