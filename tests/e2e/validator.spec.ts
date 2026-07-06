@@ -859,6 +859,9 @@ test("validates a dropped local CSV file and toggles theme", async ({
   );
   await expect(page.locator("#reportFacts")).toContainText("Marker");
   await expect(page.locator("#reportFacts")).toContainText("EXTF");
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Data kind\s*master$/ })
+  ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText("Recognition code");
   await expect(page.locator("#reportFacts")).toContainText(
     "datev-gl-account-description-v3"
@@ -920,6 +923,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expect(htmlReport).toContain("No upload");
   expect(htmlReport).toContain("Kontenbeschriftungen / category 20 / v3");
   expect(htmlReport).toContain("<dt>Marker</dt><dd>EXTF</dd>");
+  expect(htmlReport).toContain("<dt>Data kind</dt><dd>master</dd>");
   expect(htmlReport).toContain("datev-gl-account-description-v3");
   expect(htmlReport).not.toContain("Kasse lang");
 
@@ -2510,6 +2514,9 @@ test("creates a structured report for unsupported local CSV files", async ({
   await expect(
     page.locator("#reportFacts div").filter({ hasText: /^Marker\s*-$/ })
   ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Data kind\s*-$/ })
+  ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText("Privacy status");
   await expect(page.locator("#reportFacts")).toContainText(
     "Browser-only processing"
@@ -2590,6 +2597,7 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).toContain("<dt>Fields</dt><dd>-</dd>");
   expect(htmlReport).toContain("<dt>Format</dt><dd>-</dd>");
   expect(htmlReport).toContain("<dt>Marker</dt><dd>-</dd>");
+  expect(htmlReport).toContain("<dt>Data kind</dt><dd>-</dd>");
   expect(htmlReport).toContain("Privacy status");
   expect(htmlReport).toContain("Browser-only processing");
   expect(htmlReport).toContain("No server receives your file");
