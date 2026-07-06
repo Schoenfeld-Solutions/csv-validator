@@ -61,6 +61,18 @@ const readFileBytes = async (
   return merged;
 };
 
+const createSha256Hex = async (
+  bytes: Uint8Array
+): Promise<string | undefined> => {
+  if (!globalThis.crypto?.subtle) return undefined;
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+};
+
 const safeFileName = (fileName: string): string =>
   fileName.split(/[\\/]/).pop()?.trim() || "selected-file";
 
@@ -331,6 +343,7 @@ const validateFile = async (
     return;
   }
 
+  const sourceSha256 = await createSha256Hex(bytes);
   post({ code: "decode-text", type: "progress" });
   const decoded = detectAndDecodeBytes(bytes);
   if (decoded.encoding === "unknown") {
@@ -340,7 +353,8 @@ const validateFile = async (
         file.name,
         file.size,
         decoded.encoding,
-        decoded.diagnostics
+        decoded.diagnostics,
+        sourceSha256
       ),
       type: "result",
     });
@@ -356,6 +370,7 @@ const validateFile = async (
       encoding: decoded.encoding,
       preflightDiagnostics: decoded.diagnostics,
       sizeBytes: file.size,
+      sourceSha256,
       sourceName: file.name,
     }),
     preview: buildDatevDataPreview(decoded.content),

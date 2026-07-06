@@ -109,6 +109,7 @@ export interface DatevValidationResult {
   readonly source: {
     readonly name: string;
     readonly sizeBytes: number;
+    readonly sha256?: string;
     readonly processedInBrowser: true;
   };
   readonly format?: {

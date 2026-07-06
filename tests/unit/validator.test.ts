@@ -85,6 +85,26 @@ describe("validateDatevContent", () => {
     expect(result.summary.errorCount).toBe(0);
   });
 
+  it("preserves optional SHA-256 source metadata without changing validation", () => {
+    const content = validGlAccountDescriptionCsv();
+    const result = validateDatevContent({
+      content,
+      encoding: "utf-8",
+      sizeBytes: content.length,
+      sourceName: "/private/path/example.csv",
+      sourceSha256:
+        "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+    });
+
+    expect(result.status).toBe("valid");
+    expect(result.source).toMatchObject({
+      name: "example.csv",
+      processedInBrowser: true,
+      sha256:
+        "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+    });
+  });
+
   it("keeps contract health invariants for built-in fields and runtime anchors", () => {
     const expectedFieldCounts: Record<string, number> = {
       "datev-booking-batch-v10": 121,

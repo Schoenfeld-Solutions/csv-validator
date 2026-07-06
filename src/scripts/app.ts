@@ -704,6 +704,7 @@ const renderReportFacts = (
     copy.metadata.fileSize,
     formatBytes(result.source.sizeBytes)
   );
+  appendFact(reportFacts, copy.metadata.sha256, result.source.sha256 ?? "-");
   appendFact(
     reportFacts,
     copy.diagnostics.title,
@@ -1001,6 +1002,7 @@ const createHtmlReport = (
       ${createFactHtml(copy.report.sourceAndPrivacy, result.source.name)}
       ${createFactHtml(copy.resultKicker, formatResultStatus(result))}
       ${createFactHtml(copy.metadata.fileSize, formatBytes(result.source.sizeBytes))}
+      ${createFactHtml(copy.metadata.sha256, result.source.sha256 ?? "-")}
       ${createFactHtml(copy.diagnostics.title, copy.diagnostics.summary(result.summary.errorCount, result.summary.warningCount))}
       ${createFactHtml(copy.metadata.encoding, result.csv.encoding)}
       ${createFactHtml(copy.metadata.delimiter, result.csv.delimiter)}

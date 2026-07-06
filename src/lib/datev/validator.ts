@@ -68,6 +68,7 @@ const BOOKING_BATCH_OPTIONAL_FULL_DATE_FIELDS = new Set<string>([
 export interface ValidateDatevContentInput {
   readonly sourceName: string;
   readonly sizeBytes: number;
+  readonly sourceSha256?: string;
   readonly content: string;
   readonly encoding: CsvEncoding;
   readonly contractRepository?: DatevContractRepository;
@@ -80,6 +81,7 @@ export const validateDatevContent = ({
   encoding,
   preflightDiagnostics = [],
   sizeBytes,
+  sourceSha256,
   sourceName,
 }: ValidateDatevContentInput): DatevValidationResult => {
   const safeName = safeSourceName(sourceName);
@@ -221,6 +223,7 @@ export const validateDatevContent = ({
     source: {
       name: safeName,
       processedInBrowser: true,
+      ...(sourceSha256 ? { sha256: sourceSha256 } : {}),
       sizeBytes,
     },
     status,
@@ -232,7 +235,8 @@ export const createRejectedResult = (
   sourceName: string,
   sizeBytes: number,
   encoding: CsvEncoding,
-  diagnostics: readonly DatevDiagnostic[]
+  diagnostics: readonly DatevDiagnostic[],
+  sourceSha256?: string
 ): DatevValidationResult => ({
   csv: {
     dataRecordCount: 0,
@@ -246,6 +250,7 @@ export const createRejectedResult = (
   source: {
     name: safeSourceName(sourceName),
     processedInBrowser: true,
+    ...(sourceSha256 ? { sha256: sourceSha256 } : {}),
     sizeBytes,
   },
   status: "invalid",

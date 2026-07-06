@@ -11,6 +11,11 @@ schema without emitting raw file contents.
 `source.name` is a sanitized browser-provided base name. Local absolute paths
 are not emitted.
 
+`source.sha256` is present only when the browser worker successfully reads the
+file bytes. It is a local content fingerprint for report traceability, not a
+raw data value. Users should still treat exported reports as file-specific
+metadata when they share them.
+
 The browser UI may derive a local HTML validation report from this JSON result.
 That HTML report is a user-facing rendering artifact, not a replacement for
 the machine-readable result schema below. It must not include raw CSV/TXT data
@@ -46,6 +51,7 @@ type DatevValidatorResult = {
   source: {
     name: string;
     sizeBytes: number;
+    sha256?: string;
     processedInBrowser: true;
   };
   format?: {
