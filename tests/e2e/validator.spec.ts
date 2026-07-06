@@ -853,6 +853,16 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(
     page.getByRole("heading", { name: "Structured validation report" })
   ).toBeVisible();
+  await expect(page.locator("#reportFacts")).toContainText("Format");
+  await expect(page.locator("#reportFacts")).toContainText(
+    "Kontenbeschriftungen / category 20 / v3"
+  );
+  await expect(page.locator("#reportFacts")).toContainText("Marker");
+  await expect(page.locator("#reportFacts")).toContainText("EXTF");
+  await expect(page.locator("#reportFacts")).toContainText("Recognition code");
+  await expect(page.locator("#reportFacts")).toContainText(
+    "datev-gl-account-description-v3"
+  );
   await expect(page.getByText("Field semantics")).toBeVisible();
   await expect(page.getByText("Recommended next actions")).toBeVisible();
   await expect(page.locator("body")).not.toContainText("Kasse lang");
@@ -908,6 +918,8 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("DATEV CSV Validator Report");
   expect(htmlReport).toContain("No upload");
+  expect(htmlReport).toContain("Kontenbeschriftungen / category 20 / v3");
+  expect(htmlReport).toContain("<dt>Marker</dt><dd>EXTF</dd>");
   expect(htmlReport).toContain("datev-gl-account-description-v3");
   expect(htmlReport).not.toContain("Kasse lang");
 
@@ -2492,6 +2504,12 @@ test("creates a structured report for unsupported local CSV files", async ({
   await expect(
     page.locator("#reportFacts div").filter({ hasText: /^Fields\s*-$/ })
   ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Format\s*-$/ })
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Marker\s*-$/ })
+  ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText("Privacy status");
   await expect(page.locator("#reportFacts")).toContainText(
     "Browser-only processing"
@@ -2570,6 +2588,8 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).toContain("<dt>Rows</dt><dd>3</dd>");
   expect(htmlReport).toContain("<dt>Data rows</dt><dd>0</dd>");
   expect(htmlReport).toContain("<dt>Fields</dt><dd>-</dd>");
+  expect(htmlReport).toContain("<dt>Format</dt><dd>-</dd>");
+  expect(htmlReport).toContain("<dt>Marker</dt><dd>-</dd>");
   expect(htmlReport).toContain("Privacy status");
   expect(htmlReport).toContain("Browser-only processing");
   expect(htmlReport).toContain("No server receives your file");

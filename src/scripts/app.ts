@@ -220,6 +220,11 @@ const formatResultStatus = (result: DatevValidationResult): string =>
 
 const formatPrivacyStatus = (): string => copy.trust.items.join(" / ");
 
+const formatRecognizedFormat = (result: DatevValidationResult): string =>
+  result.format
+    ? `${result.format.name} / category ${result.format.category} / v${result.format.version}`
+    : "-";
+
 const formatContractSource = (
   summary: DatevContractSourceSummary | undefined
 ): string => {
@@ -644,12 +649,7 @@ const renderMetadata = (
   contractSource: DatevContractSourceSummary | undefined
 ): void => {
   setText(metaRecognition, result.format?.recognitionCode ?? "-");
-  setText(
-    metaFormat,
-    result.format
-      ? `${result.format.name} / category ${result.format.category} / v${result.format.version}`
-      : "-"
-  );
+  setText(metaFormat, formatRecognizedFormat(result));
   setText(metaMarker, result.format?.marker ?? "-");
   setText(metaEncoding, result.csv.encoding);
   setText(metaDelimiter, result.csv.delimiter);
@@ -760,6 +760,8 @@ const renderReportFacts = (
       copy.contractSource.editedWarning
     );
   }
+  appendFact(reportFacts, copy.metadata.format, formatRecognizedFormat(result));
+  appendFact(reportFacts, copy.metadata.marker, result.format?.marker ?? "-");
   appendFact(
     reportFacts,
     copy.metadata.recognition,
@@ -1023,6 +1025,8 @@ const createHtmlReport = (
             )
           : ""
       }
+      ${createFactHtml(copy.metadata.format, formatRecognizedFormat(result))}
+      ${createFactHtml(copy.metadata.marker, result.format?.marker ?? "-")}
       ${createFactHtml(copy.metadata.recognition, result.format?.recognitionCode ?? "-")}
     </dl>
     <h2>${escapeHtml(copy.report.nextActions)}</h2>
