@@ -225,6 +225,30 @@ test("loads German and English validator routes with language switch", async ({
   ).toBeVisible();
 });
 
+test("formats German report section summary with singular labels", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/de/");
+
+  await page.locator("#fileInput").setInputFiles({
+    buffer: Buffer.from(validGlAccountDescriptionCsv(), "utf8"),
+    mimeType: "text/csv",
+    name: "konten.csv",
+  });
+
+  await expect(
+    page.getByText(
+      "Gültig gegen den implementierten lokalen DATEV-CSV-Strukturvertrag."
+    )
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({
+      hasText:
+        /^Prüfstatus\s*11 bestanden, 1 Warnung, 0 fehlgeschlagen, 0 nicht ausgeführt$/,
+    })
+  ).toBeVisible();
+});
+
 test("renders worker progress messages in the active language", async ({
   page,
 }) => {
@@ -870,7 +894,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("#reportFacts")).toContainText("EXTF");
   await expect(
     page.locator("#reportFacts div").filter({
-      hasText: /^Check summary\s*11 passed, 1 warnings, 0 failed, 0 not run$/,
+      hasText: /^Check summary\s*11 passed, 1 warning, 0 failed, 0 not run$/,
     })
   ).toBeVisible();
   await expect(
@@ -943,7 +967,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expect(htmlReport).toContain("DATEV CSV Validator Report");
   expect(htmlReport).toContain("No upload");
   expect(htmlReport).toContain(
-    "<dt>Check summary</dt><dd>11 passed, 1 warnings, 0 failed, 0 not run</dd>"
+    "<dt>Check summary</dt><dd>11 passed, 1 warning, 0 failed, 0 not run</dd>"
   );
   expect(htmlReport).toContain(`<dt>SHA-256</dt><dd>${expectedSha256}</dd>`);
   expect(htmlReport).toContain("Kontenbeschriftungen / category 20 / v3");

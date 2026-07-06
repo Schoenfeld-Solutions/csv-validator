@@ -33,6 +33,9 @@ export const basePath = (baseUrl: string, route: string): string => {
   return `${normalizedBase}${route}`;
 };
 
+const countLabel = (count: number, singular: string, plural: string): string =>
+  `${count} ${count === 1 ? singular : plural}`;
+
 export const siteCopy = {
   de: {
     brand: "DATEV CSV Validator",
@@ -265,7 +268,12 @@ export const appCopy = {
         failed: number,
         notRun: number
       ) =>
-        `${passed} bestanden, ${warnings} Warnungen, ${failed} fehlgeschlagen, ${notRun} nicht ausgeführt`,
+        [
+          countLabel(passed, "bestanden", "bestanden"),
+          countLabel(warnings, "Warnung", "Warnungen"),
+          countLabel(failed, "fehlgeschlagen", "fehlgeschlagen"),
+          countLabel(notRun, "nicht ausgeführt", "nicht ausgeführt"),
+        ].join(", "),
       status: {
         failed: "Fehlgeschlagen",
         passed: "Bestanden",
@@ -542,7 +550,12 @@ export const appCopy = {
         failed: number,
         notRun: number
       ) =>
-        `${passed} passed, ${warnings} warnings, ${failed} failed, ${notRun} not run`,
+        [
+          countLabel(passed, "passed", "passed"),
+          countLabel(warnings, "warning", "warnings"),
+          countLabel(failed, "failed", "failed"),
+          countLabel(notRun, "not run", "not run"),
+        ].join(", "),
       status: {
         failed: "Failed",
         passed: "Passed",
