@@ -742,6 +742,21 @@ const renderReportFacts = (
     copy.metadata.contractSource,
     formatContractSource(report.contractSourceSummary)
   );
+  appendFact(
+    reportFacts,
+    copy.metadata.contractCount,
+    formatOptionalNumber(report.contractSourceSummary?.contractCount)
+  );
+  appendFact(
+    reportFacts,
+    copy.metadata.overrides,
+    formatOptionalNumber(report.contractSourceSummary?.overrideCount)
+  );
+  appendFact(
+    reportFacts,
+    copy.metadata.contractWarnings,
+    formatOptionalNumber(report.contractSourceSummary?.warningCount)
+  );
   if (
     report.contractSourceSummary?.kind === "mixed" &&
     report.contractSourceSummary.overrideCount > 0
@@ -895,6 +910,9 @@ const appendFact = (
   list.append(wrapper);
 };
 
+const formatOptionalNumber = (value: number | undefined): string =>
+  value === undefined ? "-" : String(value);
+
 const formatDateTime = (isoValue: string): string =>
   new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-US", {
     dateStyle: "medium",
@@ -1013,6 +1031,9 @@ const createHtmlReport = (
       ${createFactHtml(copy.report.sections.privacy, formatPrivacyStatus())}
       ${createFactHtml(copy.report.sections.contract, copy.report.contractSource[report.contractSource])}
       ${createFactHtml(copy.metadata.contractSource, formatContractSource(report.contractSourceSummary))}
+      ${createFactHtml(copy.metadata.contractCount, formatOptionalNumber(report.contractSourceSummary?.contractCount))}
+      ${createFactHtml(copy.metadata.overrides, formatOptionalNumber(report.contractSourceSummary?.overrideCount))}
+      ${createFactHtml(copy.metadata.contractWarnings, formatOptionalNumber(report.contractSourceSummary?.warningCount))}
       ${
         report.contractSourceSummary?.kind === "mixed" &&
         report.contractSourceSummary.overrideCount > 0
