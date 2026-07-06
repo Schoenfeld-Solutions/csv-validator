@@ -218,6 +218,8 @@ const getResultLabelKey = (
 const formatResultStatus = (result: DatevValidationResult): string =>
   badgeLabels[locale][getResultLabelKey(result)];
 
+const formatPrivacyStatus = (): string => copy.trust.items.join(" / ");
+
 const formatContractSource = (
   summary: DatevContractSourceSummary | undefined
 ): string => {
@@ -728,6 +730,7 @@ const renderReportFacts = (
     copy.metadata.fields,
     result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount)
   );
+  appendFact(reportFacts, copy.report.sections.privacy, formatPrivacyStatus());
   appendFact(
     reportFacts,
     copy.report.sections.contract,
@@ -998,6 +1001,7 @@ const createHtmlReport = (
       ${createFactHtml(copy.metadata.rows, String(result.csv.physicalLineCount))}
       ${createFactHtml(copy.metadata.dataRows, String(result.csv.dataRecordCount))}
       ${createFactHtml(copy.metadata.fields, result.csv.fieldCount === undefined ? "-" : String(result.csv.fieldCount))}
+      ${createFactHtml(copy.report.sections.privacy, formatPrivacyStatus())}
       ${createFactHtml(copy.report.sections.contract, copy.report.contractSource[report.contractSource])}
       ${createFactHtml(copy.metadata.contractSource, formatContractSource(report.contractSourceSummary))}
       ${
