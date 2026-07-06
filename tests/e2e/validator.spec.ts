@@ -870,6 +870,11 @@ test("validates a dropped local CSV file and toggles theme", async ({
   await expect(page.locator("#reportFacts")).toContainText("EXTF");
   await expect(
     page.locator("#reportFacts div").filter({
+      hasText: /^Check summary\s*11 passed, 1 warnings, 0 failed, 0 not run$/,
+    })
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({
       hasText: new RegExp(`^SHA-256\\s*${expectedSha256}$`),
     })
   ).toBeVisible();
@@ -937,6 +942,9 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("DATEV CSV Validator Report");
   expect(htmlReport).toContain("No upload");
+  expect(htmlReport).toContain(
+    "<dt>Check summary</dt><dd>11 passed, 1 warnings, 0 failed, 0 not run</dd>"
+  );
   expect(htmlReport).toContain(`<dt>SHA-256</dt><dd>${expectedSha256}</dd>`);
   expect(htmlReport).toContain("Kontenbeschriftungen / category 20 / v3");
   expect(htmlReport).toContain("<dt>Marker</dt><dd>EXTF</dd>");
@@ -2537,6 +2545,11 @@ test("creates a structured report for unsupported local CSV files", async ({
   ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText("Validation result");
   await expect(page.locator("#reportFacts")).toContainText("Unsupported");
+  await expect(
+    page.locator("#reportFacts div").filter({
+      hasText: /^Check summary\s*7 passed, 0 warnings, 2 failed, 3 not run$/,
+    })
+  ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText("File size");
   await expect(page.locator("#reportFacts")).toContainText(expectedFileSize);
   await expect(
@@ -2641,6 +2654,9 @@ test("creates a structured report for unsupported local CSV files", async ({
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("Validation result");
   expect(htmlReport).toContain("Unsupported");
+  expect(htmlReport).toContain(
+    "<dt>Check summary</dt><dd>7 passed, 0 warnings, 2 failed, 3 not run</dd>"
+  );
   expect(htmlReport).toContain("File size");
   expect(htmlReport).toContain(expectedFileSize);
   expect(htmlReport).toContain(`<dt>SHA-256</dt><dd>${expectedSha256}</dd>`);

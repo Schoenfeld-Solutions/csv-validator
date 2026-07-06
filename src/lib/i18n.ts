@@ -258,6 +258,14 @@ export const appCopy = {
       downloadName: "datev-validator-bericht",
       htmlTitle: "DATEV CSV Validator Bericht",
       sourceAndPrivacy: "Datei und lokale Verarbeitung",
+      sectionStatusSummary: "Prüfstatus",
+      sectionStatusCounts: (
+        passed: number,
+        warnings: number,
+        failed: number,
+        notRun: number
+      ) =>
+        `${passed} bestanden, ${warnings} Warnungen, ${failed} fehlgeschlagen, ${notRun} nicht ausgeführt`,
       status: {
         failed: "Fehlgeschlagen",
         passed: "Bestanden",
@@ -527,6 +535,14 @@ export const appCopy = {
       downloadName: "datev-validator-report",
       htmlTitle: "DATEV CSV Validator Report",
       sourceAndPrivacy: "File and local processing",
+      sectionStatusSummary: "Check summary",
+      sectionStatusCounts: (
+        passed: number,
+        warnings: number,
+        failed: number,
+        notRun: number
+      ) =>
+        `${passed} passed, ${warnings} warnings, ${failed} failed, ${notRun} not run`,
       status: {
         failed: "Failed",
         passed: "Passed",

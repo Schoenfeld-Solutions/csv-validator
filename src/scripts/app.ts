@@ -220,6 +220,19 @@ const formatResultStatus = (result: DatevValidationResult): string =>
 
 const formatPrivacyStatus = (): string => copy.trust.items.join(" / ");
 
+const formatSectionStatusCounts = (report: DatevValidationReport): string => {
+  const counts = { failed: 0, "not-run": 0, passed: 0, warning: 0 };
+  for (const section of report.sections) {
+    counts[section.status] += 1;
+  }
+  return copy.report.sectionStatusCounts(
+    counts.passed,
+    counts.warning,
+    counts.failed,
+    counts["not-run"]
+  );
+};
+
 const formatRecognizedFormat = (result: DatevValidationResult): string =>
   result.format
     ? `${result.format.name} / category ${result.format.category} / v${result.format.version}`
@@ -701,6 +714,11 @@ const renderReportFacts = (
   appendFact(reportFacts, copy.resultKicker, formatResultStatus(result));
   appendFact(
     reportFacts,
+    copy.report.sectionStatusSummary,
+    formatSectionStatusCounts(report)
+  );
+  appendFact(
+    reportFacts,
     copy.metadata.fileSize,
     formatBytes(result.source.sizeBytes)
   );
@@ -1019,6 +1037,7 @@ const createHtmlReport = (
       ${createFactHtml(copy.report.generatedAt, formatDateTime(report.generatedAt))}
       ${createFactHtml(copy.report.sourceAndPrivacy, result.source.name)}
       ${createFactHtml(copy.resultKicker, formatResultStatus(result))}
+      ${createFactHtml(copy.report.sectionStatusSummary, formatSectionStatusCounts(report))}
       ${createFactHtml(copy.metadata.fileSize, formatBytes(result.source.sizeBytes))}
       ${createFactHtml(copy.metadata.sha256, result.source.sha256 ?? "-")}
       ${createFactHtml(copy.diagnostics.title, copy.diagnostics.summary(result.summary.errorCount, result.summary.warningCount))}
