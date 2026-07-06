@@ -1197,6 +1197,19 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   await expect(page.locator("#metaContractSource")).toContainText(
     "Built-in plus loaded XML contracts"
   );
+  await expect(
+    page
+      .locator("#reportFacts div")
+      .filter({ hasText: /^Contract count\s*13$/ })
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Overrides\s*0$/ })
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#reportFacts div")
+      .filter({ hasText: /^Contract warnings\s*0$/ })
+  ).toBeVisible();
   await expect(page.locator("body")).not.toContainText("custom-hidden-value");
 
   await page.evaluate(() => {
@@ -1231,6 +1244,9 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("Built-in plus loaded XML contracts");
+  expect(htmlReport).toContain("<dt>Contract count</dt><dd>13</dd>");
+  expect(htmlReport).toContain("<dt>Overrides</dt><dd>0</dd>");
+  expect(htmlReport).toContain("<dt>Contract warnings</dt><dd>0</dd>");
   expect(htmlReport).not.toContain("custom-hidden-value");
   expect(htmlReport).not.toContain("datev-format-contracts");
 
@@ -2426,6 +2442,19 @@ test("shows a warning when mixed XML contracts override built-in signatures", as
   await expect(page.locator("#contractSourceWarning")).toContainText(
     "override built-in local contract data"
   );
+  await expect(
+    page
+      .locator("#reportFacts div")
+      .filter({ hasText: /^Contract count\s*12$/ })
+  ).toBeVisible();
+  await expect(
+    page.locator("#reportFacts div").filter({ hasText: /^Overrides\s*1$/ })
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#reportFacts div")
+      .filter({ hasText: /^Contract warnings\s*1$/ })
+  ).toBeVisible();
   await expect(page.locator("body")).not.toContainText("override-hidden-value");
 
   await page.evaluate(() => {
@@ -2461,6 +2490,9 @@ test("shows a warning when mixed XML contracts override built-in signatures", as
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("Override warning");
   expect(htmlReport).toContain("override built-in local contract data");
+  expect(htmlReport).toContain("<dt>Contract count</dt><dd>12</dd>");
+  expect(htmlReport).toContain("<dt>Overrides</dt><dd>1</dd>");
+  expect(htmlReport).toContain("<dt>Contract warnings</dt><dd>1</dd>");
   expect(htmlReport).not.toContain("override-hidden-value");
   expect(htmlReport).not.toContain("datev-format-contracts");
 });

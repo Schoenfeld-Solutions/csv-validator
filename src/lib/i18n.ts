@@ -121,6 +121,9 @@ export const appCopy = {
       dataRows: "Datenzeilen",
       fields: "Felder",
       contractSource: "Vertragsquelle",
+      contractCount: "Vertragsanzahl",
+      overrides: "Overrides",
+      contractWarnings: "Vertragswarnungen",
     },
     contractSource: {
       kicker: "Erweiterter lokaler Vertrag",
@@ -391,6 +394,9 @@ export const appCopy = {
       dataRows: "Data rows",
       fields: "Fields",
       contractSource: "Contract source",
+      contractCount: "Contract count",
+      overrides: "Overrides",
+      contractWarnings: "Contract warnings",
     },
     contractSource: {
       kicker: "Advanced local contract",
