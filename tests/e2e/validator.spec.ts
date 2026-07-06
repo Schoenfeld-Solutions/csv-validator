@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
@@ -9,6 +10,9 @@ import {
 } from "../unit/datev-test-fixtures";
 
 const appOrigin = "http://127.0.0.1:4321";
+
+const sha256Hex = (value: string): string =>
+  createHash("sha256").update(value, "utf8").digest("hex");
 
 const validCustomContractXml = (
   overrides: Partial<{
@@ -259,6 +263,8 @@ test("renders worker progress messages in the active language", async ({
   });
   await page.goto("/csv-validator/de/");
 
+  const validCsv = validGlAccountDescriptionCsv();
+
   await page.evaluate((content) => {
     const dropzone = document.getElementById("dropzone");
     if (!dropzone) throw new Error("dropzone missing");
@@ -273,7 +279,7 @@ test("renders worker progress messages in the active language", async ({
         dataTransfer,
       })
     );
-  }, validGlAccountDescriptionCsv());
+  }, validCsv);
 
   await expect(page.locator("#statusLine")).toHaveText(
     "Datei wird im Browser-Worker gelesen."
@@ -826,6 +832,9 @@ test("validates a dropped local CSV file and toggles theme", async ({
   });
   await page.goto("/csv-validator/en/");
 
+  const validCsv = validGlAccountDescriptionCsv();
+  const expectedSha256 = sha256Hex(validCsv);
+
   await page.evaluate((content) => {
     const dropzone = document.getElementById("dropzone");
     if (!dropzone) throw new Error("dropzone missing");
@@ -840,7 +849,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
         dataTransfer,
       })
     );
-  }, validGlAccountDescriptionCsv());
+  }, validCsv);
 
   await expect(
     page.getByText(
@@ -859,6 +868,11 @@ test("validates a dropped local CSV file and toggles theme", async ({
   );
   await expect(page.locator("#reportFacts")).toContainText("Marker");
   await expect(page.locator("#reportFacts")).toContainText("EXTF");
+  await expect(
+    page.locator("#reportFacts div").filter({
+      hasText: new RegExp(`^SHA-256\\s*${expectedSha256}$`),
+    })
+  ).toBeVisible();
   await expect(
     page.locator("#reportFacts div").filter({ hasText: /^Data kind\s*master$/ })
   ).toBeVisible();
@@ -902,6 +916,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
     () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
   );
   expect(copiedJson).toContain("datev-gl-account-description-v3");
+  expect(JSON.parse(copiedJson).source.sha256).toBe(expectedSha256);
   expect(copiedJson).not.toContain("Kasse lang");
 
   const jsonDownloadPromise = page.waitForEvent("download");
@@ -910,6 +925,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   const jsonPath = await jsonDownload.path();
   expect(jsonPath).toBeTruthy();
   const jsonReport = await readFile(jsonPath ?? "", "utf8");
+  expect(JSON.parse(jsonReport).source.sha256).toBe(expectedSha256);
   expect(jsonReport).not.toContain("Kasse lang");
 
   const htmlDownloadPromise = page.waitForEvent("download");
@@ -921,6 +937,7 @@ test("validates a dropped local CSV file and toggles theme", async ({
   expectHtmlReportToBeLocalOnly(htmlReport);
   expect(htmlReport).toContain("DATEV CSV Validator Report");
   expect(htmlReport).toContain("No upload");
+  expect(htmlReport).toContain(`<dt>SHA-256</dt><dd>${expectedSha256}</dd>`);
   expect(htmlReport).toContain("Kontenbeschriftungen / category 20 / v3");
   expect(htmlReport).toContain("<dt>Marker</dt><dd>EXTF</dd>");
   expect(htmlReport).toContain("<dt>Data kind</dt><dd>master</dd>");
@@ -2459,6 +2476,7 @@ test("creates a structured report for unsupported local CSV files", async ({
     csvLine(["preview-secret", "2"]),
   ].join("\r\n");
   const expectedFileSize = `${Buffer.byteLength(unsupportedCsv, "utf8")} B`;
+  const expectedSha256 = sha256Hex(unsupportedCsv);
   const expectedDiagnosticSummary = "0 errors, 1 warnings";
 
   await page.evaluate((content) => {
@@ -2489,6 +2507,11 @@ test("creates a structured report for unsupported local CSV files", async ({
   await expect(page.locator("#reportFacts")).toContainText("Unsupported");
   await expect(page.locator("#reportFacts")).toContainText("File size");
   await expect(page.locator("#reportFacts")).toContainText(expectedFileSize);
+  await expect(
+    page.locator("#reportFacts div").filter({
+      hasText: new RegExp(`^SHA-256\\s*${expectedSha256}$`),
+    })
+  ).toBeVisible();
   await expect(page.locator("#reportFacts")).toContainText(
     "Errors and warnings"
   );
@@ -2562,6 +2585,7 @@ test("creates a structured report for unsupported local CSV files", async ({
     () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
   );
   expect(copiedJson).toContain("FORMAT_UNSUPPORTED");
+  expect(JSON.parse(copiedJson).source.sha256).toBe(expectedSha256);
   expect(copiedJson).not.toContain("EXTF;");
   expect(copiedJson).not.toContain("preview-secret");
 
@@ -2572,6 +2596,7 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(jsonPath).toBeTruthy();
   const jsonReport = await readFile(jsonPath ?? "", "utf8");
   expect(jsonReport).toContain("FORMAT_UNSUPPORTED");
+  expect(JSON.parse(jsonReport).source.sha256).toBe(expectedSha256);
   expect(jsonReport).not.toContain("EXTF;");
   expect(jsonReport).not.toContain("preview-secret");
 
@@ -2586,6 +2611,7 @@ test("creates a structured report for unsupported local CSV files", async ({
   expect(htmlReport).toContain("Unsupported");
   expect(htmlReport).toContain("File size");
   expect(htmlReport).toContain(expectedFileSize);
+  expect(htmlReport).toContain(`<dt>SHA-256</dt><dd>${expectedSha256}</dd>`);
   expect(htmlReport).toContain("Errors and warnings");
   expect(htmlReport).toContain(expectedDiagnosticSummary);
   expect(htmlReport).toContain("Delimiter");
