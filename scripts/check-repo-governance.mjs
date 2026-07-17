@@ -88,6 +88,11 @@ const validatePullRequestWorkflow = async () => {
     "pull-requests: read",
     "validate-pr-title:",
     "dependency-review:",
+    "uses: actions/dependency-review-action@v5",
+    "fail-on-severity: low",
+    "fail-on-scopes: runtime, development, unknown",
+    "vulnerability-check: true",
+    "warn-only: false",
     "quality:",
     "name: Preflight",
     "needs: [validate-pr-title, dependency-review]",
@@ -99,6 +104,8 @@ const validatePullRequestWorkflow = async () => {
   ]) {
     requireSnippet(path, text, snippet);
   }
+  forbidSnippet(path, text, "continue-on-error:");
+  forbidSnippet(path, text, "warn-only: true");
 };
 
 const validatePagesWorkflow = async () => {
@@ -303,6 +310,7 @@ const validateDocumentation = async () => {
   for (const snippet of [
     "Protect main",
     "validate-pr-title",
+    "dependency-review",
     "Preflight",
     "no bypass actors",
     "required_approving_review_count: 0",
@@ -313,6 +321,7 @@ const validateDocumentation = async () => {
   const release = await readText("docs/ops/release-readiness.md");
   for (const snippet of [
     "npm run preflight",
+    "dependency-review",
     "git diff --check",
     "git ls-files .local docs/plans",
     "squash merge",

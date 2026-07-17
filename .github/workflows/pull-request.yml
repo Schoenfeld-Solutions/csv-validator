@@ -47,7 +47,11 @@ jobs:
 
       - name: Review dependency changes
         uses: actions/dependency-review-action@v5
-        continue-on-error: true
+        with:
+          fail-on-severity: low
+          fail-on-scopes: runtime, development, unknown
+          vulnerability-check: true
+          warn-only: false
 
   quality:
     name: Preflight

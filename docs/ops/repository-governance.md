@@ -17,6 +17,7 @@ state:
 - Linear history required
 - Required status checks with strict policy:
   - `validate-pr-title`
+  - `dependency-review`
   - `Preflight`
 
 The current ruleset state can be read locally with:
@@ -42,6 +43,8 @@ policies:
 
 - expected workflow files, permissions, concurrency, and job timeouts,
 - stable required check names for the ruleset,
+- fail-closed dependency review at low severity across runtime, development,
+  and unknown scopes,
 - canonical preflight coverage, including public copy and legacy source naming
   checks,
 - no use of `pull_request_target`,
