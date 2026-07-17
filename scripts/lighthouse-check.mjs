@@ -1,10 +1,8 @@
 import { spawn } from "node:child_process";
+import { createServer } from "node:net";
+import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
-const urls = [
-  "http://127.0.0.1:4322/csv-validator/de/",
-  "http://127.0.0.1:4322/csv-validator/en/",
-];
 const chromePath = chromium.executablePath();
 const thresholds = {
   accessibility: 1,
@@ -12,6 +10,28 @@ const thresholds = {
   performance: 1,
   seo: 1,
 };
+
+const delay = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const findAvailablePort = () =>
+  new Promise((resolve, reject) => {
+    const server = createServer();
+    server.unref();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        reject(new Error("Could not allocate a local Lighthouse port."));
+        return;
+      }
+      server.close((error) => {
+        if (error) reject(error);
+        else resolve(address.port);
+      });
+    });
+  });
 
 const run = (command, args, options = {}) =>
   new Promise((resolve, reject) => {
@@ -56,32 +76,73 @@ const summarizeCategoryFailures = (category, audits) => {
     .slice(0, 10);
 };
 
+const previewPort = await findAvailablePort();
+const urls = [
+  `http://127.0.0.1:${previewPort}/csv-validator/de/`,
+  `http://127.0.0.1:${previewPort}/csv-validator/en/`,
+];
+const astroCliPath = fileURLToPath(
+  new URL("../node_modules/astro/bin/astro.mjs", import.meta.url)
+);
 const preview = spawn(
-  "npm",
-  ["run", "preview", "--", "--host", "127.0.0.1", "--port", "4322"],
+  process.execPath,
+  [
+    astroCliPath,
+    "preview",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    String(previewPort),
+  ],
   {
-    stdio: "ignore",
+    env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
+    stdio: ["ignore", "ignore", "pipe"],
   }
 );
+let previewStderr = "";
+preview.stderr.on("data", (chunk) => {
+  previewStderr = `${previewStderr}${chunk.toString()}`.slice(-4_000);
+});
 
-const stopPreview = () => {
-  if (!preview.killed) {
-    preview.kill("SIGTERM");
+const stopPreview = async () => {
+  if (preview.exitCode !== null || preview.signalCode !== null) return;
+  preview.kill("SIGTERM");
+  await Promise.race([
+    new Promise((resolve) => preview.once("close", resolve)),
+    delay(5_000),
+  ]);
+  if (preview.exitCode === null && preview.signalCode === null) {
+    preview.kill("SIGKILL");
   }
 };
 
 try {
+  let previewReady = false;
   for (let attempt = 0; attempt < 60; attempt += 1) {
+    if (preview.exitCode !== null || preview.signalCode !== null) {
+      throw new Error(
+        `Astro preview exited before Lighthouse could start.\n${previewStderr}`
+      );
+    }
     try {
       const response = await fetch(urls[0]);
-      if (response.ok) break;
+      if (response.ok) {
+        previewReady = true;
+        break;
+      }
     } catch {
       // Server is not ready yet.
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await delay(500);
+  }
+  if (!previewReady) {
+    throw new Error(
+      `Astro preview did not become ready for Lighthouse.\n${previewStderr}`
+    );
   }
 
-  for (const [index, url] of urls.entries()) {
+  for (const url of urls) {
+    const lighthousePort = await findAvailablePort();
     const { stdout } = await run(
       "npx",
       [
@@ -90,11 +151,12 @@ try {
         "--quiet",
         "--output=json",
         "--hostname=127.0.0.1",
-        `--port=${9223 + index}`,
-        "--chrome-flags=--headless=new --no-sandbox",
+        `--port=${lighthousePort}`,
+        "--chrome-flags=--headless --no-sandbox",
       ],
       {
         env: { ...process.env, CHROME_PATH: chromePath },
+        timeout: 120_000,
       }
     );
     const report = JSON.parse(stdout);
@@ -118,5 +180,5 @@ try {
     }
   }
 } finally {
-  stopPreview();
+  await stopPreview();
 }
