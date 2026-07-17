@@ -21,19 +21,26 @@ That HTML report is a user-facing rendering artifact, not a replacement for
 the machine-readable result schema below. It must not include raw CSV/TXT data
 values.
 
-The browser worker may also use a session-local uploaded project contract XML
-source, either uploaded-only or mixed with built-in contracts. It may
-also use a session-local edited contract clone derived from the active local
-source. Edited contracts are browser-session state, do not mutate built-in
-defaults, and are discarded when the session ends. Contract-source labels,
-counts, and override warnings are UI/report metadata and are intentionally
-outside this stable JSON result schema.
+The browser worker may also use a session-local XML contract source, either
+uploaded-only or mixed with built-in contracts. Accepted shapes are the
+documented project contract XML subset and a built-in-equivalent
+`FormatDescription` subset. A format description activates only after exact
+name/version, CSV-property, field-order, type, length, decimal, required, and
+supported-expression matching. The selected built-in recognition, captions,
+fields, and rules remain authoritative and a fallback warning is shown. New or
+structurally different versions remain inactive.
 
-Uploaded project contract XML files are interpreted only as a constrained local
-structural contract subset. Files without a `.xml` name are rejected before
-parsing. A single safe leading XML declaration may be accepted, while DOCTYPE
-declarations, entities, external references, and arbitrary processing
-instructions remain unsupported before interpretation. XML attributes may use
+The worker may also use a session-local edited contract clone derived from the
+active local source. Edited contracts do not mutate built-in defaults and are
+discarded when the session ends. Contract-source labels, counts, override
+warnings, and format-description fallback counts are UI/report metadata and are
+intentionally outside this stable JSON result schema.
+
+Local contract XML files are interpreted only through the two constrained
+subsets above. Files without a `.xml` name are rejected before parsing. A single
+safe leading XML declaration may be accepted, while DOCTYPE declarations,
+entities, external references, and arbitrary processing instructions remain
+unsupported before interpretation. XML attributes may use
 single or double quotes and standard predefined or numeric character
 references. Raw ampersands, unsupported entity references, and invalid numeric
 character references fail closed. The constrained parser bounds document

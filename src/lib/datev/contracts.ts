@@ -72,12 +72,26 @@ export const createMixedContractRepository = (
     uploadedRecognitions.map((recognition) => recognition.recognitionCode)
   );
   const builtInRecognitions = builtInRepository.listRecognitions();
+  const equivalentSignatures = new Set<string>();
+  const equivalentRecognitionCodes = new Set<string>();
   const overriddenSignatures = new Set<string>();
   const collidedBuiltInCodes = new Set<string>();
 
   for (const builtInRecognition of builtInRecognitions) {
     const signature = recognitionSignature(builtInRecognition);
-    if (uploadedBySignature.has(signature)) {
+    const uploadedRecognition = uploadedBySignature.get(signature);
+    if (
+      uploadedRecognition &&
+      repositoriesHaveEquivalentContract(
+        builtInRepository,
+        builtInRecognition,
+        uploadedRepository,
+        uploadedRecognition
+      )
+    ) {
+      equivalentSignatures.add(signature);
+      equivalentRecognitionCodes.add(builtInRecognition.recognitionCode);
+    } else if (uploadedRecognition) {
       overriddenSignatures.add(signature);
     } else if (
       uploadedRecognitionCodes.has(builtInRecognition.recognitionCode)
@@ -91,9 +105,13 @@ export const createMixedContractRepository = (
       !overriddenSignatures.has(recognitionSignature(recognition)) &&
       !collidedBuiltInCodes.has(recognition.recognitionCode)
   );
+  const retainedUploadedRecognitions = uploadedRecognitions.filter(
+    (recognition) =>
+      !equivalentSignatures.has(recognitionSignature(recognition))
+  );
   const mixedRecognitions = [
     ...retainedBuiltInRecognitions,
-    ...uploadedRecognitions,
+    ...retainedUploadedRecognitions,
   ];
   const overrideCount = overriddenSignatures.size;
 
@@ -104,6 +122,13 @@ export const createMixedContractRepository = (
       version: string
     ): DatevRecognitionContract | undefined => {
       const signature = signatureFromParts(category, name, version);
+      if (equivalentSignatures.has(signature)) {
+        return builtInRepository.findRecognitionBySignature(
+          category,
+          name,
+          version
+        );
+      }
       const uploadedRecognition = uploadedBySignature.get(signature);
       if (uploadedRecognition) return uploadedRecognition;
 
@@ -120,19 +145,25 @@ export const createMixedContractRepository = (
     getFields: (
       recognitionCode: string
     ): readonly DatevFieldContract[] | undefined =>
-      uploadedRepository.getFields(recognitionCode) ??
-      builtInRepository.getFields(recognitionCode),
+      equivalentRecognitionCodes.has(recognitionCode)
+        ? builtInRepository.getFields(recognitionCode)
+        : (uploadedRepository.getFields(recognitionCode) ??
+          builtInRepository.getFields(recognitionCode)),
     getRules: (
       recognitionCode: string
     ): readonly DatevFieldRuleContract[] | undefined =>
-      uploadedRepository.getRules(recognitionCode) ??
-      builtInRepository.getRules(recognitionCode),
+      equivalentRecognitionCodes.has(recognitionCode)
+        ? builtInRepository.getRules(recognitionCode)
+        : (uploadedRepository.getRules(recognitionCode) ??
+          builtInRepository.getRules(recognitionCode)),
     listRecognitions: (): readonly DatevRecognitionContract[] =>
       mixedRecognitions,
     summary: {
       contractCount: mixedRecognitions.length,
+      formatDescriptionFallbackCount:
+        uploadedRepository.summary.formatDescriptionFallbackCount,
       kind: "mixed",
-      label: "Built-in plus uploaded project contract XML",
+      label: "Built-in plus loaded local contract XML",
       overrideCount,
       warningCount:
         uploadedRepository.summary.warningCount + (overrideCount > 0 ? 1 : 0),
@@ -330,6 +361,73 @@ const signatureFromParts = (
   name: string,
   version: string
 ): string => [category, name, version].join("\u0000");
+
+const repositoriesHaveEquivalentContract = (
+  leftRepository: DatevContractRepository,
+  leftRecognition: DatevRecognitionContract,
+  rightRepository: DatevContractRepository,
+  rightRecognition: DatevRecognitionContract
+): boolean => {
+  if (!recognitionsAreEquivalent(leftRecognition, rightRecognition)) {
+    return false;
+  }
+  const leftFields = leftRepository.getFields(leftRecognition.recognitionCode);
+  const rightFields = rightRepository.getFields(
+    rightRecognition.recognitionCode
+  );
+  const leftRules = leftRepository.getRules(leftRecognition.recognitionCode);
+  const rightRules = rightRepository.getRules(rightRecognition.recognitionCode);
+  return (
+    arraysAreEquivalent(leftFields, rightFields, fieldsAreEquivalent) &&
+    arraysAreEquivalent(leftRules, rightRules, rulesAreEquivalent)
+  );
+};
+
+const recognitionsAreEquivalent = (
+  left: DatevRecognitionContract,
+  right: DatevRecognitionContract
+): boolean =>
+  left.recognitionCode === right.recognitionCode &&
+  left.formatCategory === right.formatCategory &&
+  left.formatName === right.formatName &&
+  left.formatVersion === right.formatVersion &&
+  left.dataKind === right.dataKind &&
+  arraysAreEquivalent(
+    left.allowedDatevMarkers,
+    right.allowedDatevMarkers,
+    Object.is
+  ) &&
+  arraysAreEquivalent(left.requiredCaptions, right.requiredCaptions, Object.is);
+
+const fieldsAreEquivalent = (
+  left: DatevFieldContract,
+  right: DatevFieldContract
+): boolean =>
+  left.fieldNumber === right.fieldNumber && left.caption === right.caption;
+
+const rulesAreEquivalent = (
+  left: DatevFieldRuleContract,
+  right: DatevFieldRuleContract
+): boolean =>
+  left.fieldNumber === right.fieldNumber &&
+  left.formatType === right.formatType &&
+  left.maxLength === right.maxLength &&
+  left.decimalPlaces === right.decimalPlaces &&
+  left.necessary === right.necessary &&
+  left.formatExpression === right.formatExpression;
+
+const arraysAreEquivalent = <Item>(
+  left: readonly Item[] | undefined,
+  right: readonly Item[] | undefined,
+  compare: (left: Item, right: Item) => boolean
+): boolean =>
+  left !== undefined &&
+  right !== undefined &&
+  left.length === right.length &&
+  left.every((item, index) => {
+    const rightItem = right[index];
+    return rightItem !== undefined && compare(item, rightItem);
+  });
 
 const validateEditableContractDraft = (
   draft: DatevEditableContractDraft
