@@ -15,11 +15,14 @@ import {
   validateDatevContent,
 } from "../lib/datev/validator";
 import { buildDatevDataPreview } from "../lib/datev/preview";
+import { createLatestOperationIdTracker } from "../lib/datev/operation-correlation";
 import type {
   DatevActiveContractSourceKind,
   DatevContractRepository,
   DatevEditableContractDraft,
   DatevDiagnostic,
+  WorkerContractLoadResponse,
+  WorkerOperationReference,
   WorkerValidationRequest,
   WorkerValidationResponse,
 } from "../lib/datev/types";
@@ -35,6 +38,35 @@ const post = (message: WorkerValidationResponse): void => {
 let uploadedContractRepository: DatevContractRepository | undefined;
 let mixedContractRepository: DatevContractRepository | undefined;
 let editedSessionContractRepository: DatevContractRepository | undefined;
+const latestContractLoad = createLatestOperationIdTracker();
+
+type ContractLoadOperation = WorkerOperationReference<"contract-load">;
+type ContractEditOperation = WorkerOperationReference<"contract-edit">;
+type ValidationOperation = WorkerOperationReference<"validation">;
+
+const publishContractLoad = (
+  operation: ContractLoadOperation,
+  response: Omit<WorkerContractLoadResponse, keyof WorkerOperationReference>,
+  repositories?: {
+    readonly uploaded: DatevContractRepository | undefined;
+    readonly mixed: DatevContractRepository | undefined;
+  }
+): boolean => {
+  if (!latestContractLoad.isCurrent(operation.operationId)) return false;
+  uploadedContractRepository = repositories?.uploaded;
+  mixedContractRepository = repositories?.mixed;
+  post({ ...operation, ...response });
+  return true;
+};
+
+const postContractLoadProgress = (
+  operation: ContractLoadOperation,
+  code: "read-xml-contracts" | "build-xml-contract-source"
+): boolean => {
+  if (!latestContractLoad.isCurrent(operation.operationId)) return false;
+  post({ ...operation, code, type: "progress" });
+  return true;
+};
 
 const readFileBytes = async (
   file: File,
@@ -95,11 +127,12 @@ const getContractRepository = (
         ? editedSessionContractRepository
         : BUILT_IN_CONTRACT_REPOSITORY;
 
-const loadContractFiles = async (files: readonly File[]): Promise<void> => {
+const loadContractFiles = async (
+  files: readonly File[],
+  operation: ContractLoadOperation
+): Promise<void> => {
   if (files.length === 0) {
-    uploadedContractRepository = undefined;
-    mixedContractRepository = undefined;
-    post({
+    publishContractLoad(operation, {
       diagnostics: [
         diagnostic(
           "error",
@@ -113,9 +146,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   }
 
   if (files.length > MAX_XML_CONTRACT_FILES) {
-    uploadedContractRepository = undefined;
-    mixedContractRepository = undefined;
-    post({
+    publishContractLoad(operation, {
       diagnostics: [
         diagnostic(
           "error",
@@ -163,13 +194,14 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
     );
   }
   if (sizeDiagnostics.length > 0) {
-    uploadedContractRepository = undefined;
-    mixedContractRepository = undefined;
-    post({ diagnostics: sizeDiagnostics, type: "contracts" });
+    publishContractLoad(operation, {
+      diagnostics: sizeDiagnostics,
+      type: "contracts",
+    });
     return;
   }
 
-  post({ code: "read-xml-contracts", type: "progress" });
+  if (!postContractLoadProgress(operation, "read-xml-contracts")) return;
   const xmlContents: string[] = [];
   const diagnostics: DatevDiagnostic[] = [];
   for (const file of files) {
@@ -177,6 +209,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
       const decoded = detectAndDecodeBytes(
         await readFileBytes(file, MAX_XML_CONTRACT_FILE_SIZE_BYTES)
       );
+      if (!latestContractLoad.isCurrent(operation.operationId)) return;
       if (decoded.encoding === "unknown") {
         diagnostics.push(
           ...decoded.diagnostics.map((item) => ({
@@ -200,36 +233,42 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
   }
 
   if (diagnostics.some((item) => item.severity === "error")) {
-    uploadedContractRepository = undefined;
-    mixedContractRepository = undefined;
-    post({ diagnostics, type: "contracts" });
+    publishContractLoad(operation, { diagnostics, type: "contracts" });
     return;
   }
 
-  post({ code: "build-xml-contract-source", type: "progress" });
+  if (!postContractLoadProgress(operation, "build-xml-contract-source")) {
+    return;
+  }
   const imported = importDatevXmlContractSet(xmlContents);
-  uploadedContractRepository = imported.repository;
-  mixedContractRepository = imported.repository
+  const uploadedRepository = imported.repository;
+  const mixedRepository = imported.repository
     ? createMixedContractRepository(
         BUILT_IN_CONTRACT_REPOSITORY,
         imported.repository
       )
     : undefined;
-  post({
-    diagnostics: imported.diagnostics,
-    mixedSummary: mixedContractRepository?.summary,
-    summary: imported.repository?.summary,
-    type: "contracts",
-  });
+  publishContractLoad(
+    operation,
+    {
+      diagnostics: imported.diagnostics,
+      mixedSummary: mixedRepository?.summary,
+      summary: uploadedRepository?.summary,
+      type: "contracts",
+    },
+    { mixed: mixedRepository, uploaded: uploadedRepository }
+  );
 };
 
 const createEditableContract = (
   recognitionCode: string,
-  source: DatevActiveContractSourceKind | undefined
+  source: DatevActiveContractSourceKind | undefined,
+  operation: ContractEditOperation
 ): void => {
   const repository = getContractRepository(source);
   if (!repository) {
     post({
+      ...operation,
       diagnostics: [
         diagnostic(
           "error",
@@ -244,18 +283,23 @@ const createEditableContract = (
 
   const editable = createEditableContractDraft(repository, recognitionCode);
   post({
+    ...operation,
     diagnostics: editable.diagnostics,
     draft: editable.draft,
     type: "editable-contract",
   });
 };
 
-const saveEditableContract = (draft: DatevEditableContractDraft): void => {
+const saveEditableContract = (
+  draft: DatevEditableContractDraft,
+  operation: ContractEditOperation
+): void => {
   const edited = createEditedSessionContractRepository(draft);
   if (edited.repository) {
     editedSessionContractRepository = edited.repository;
   }
   post({
+    ...operation,
     diagnostics: edited.diagnostics,
     draft: edited.repository ? draft : undefined,
     summary: edited.repository?.summary,
@@ -263,9 +307,10 @@ const saveEditableContract = (draft: DatevEditableContractDraft): void => {
   });
 };
 
-const discardEditableContract = (): void => {
+const discardEditableContract = (operation: ContractEditOperation): void => {
   editedSessionContractRepository = undefined;
   post({
+    ...operation,
     diagnostics: [],
     type: "editable-contract",
   });
@@ -273,12 +318,15 @@ const discardEditableContract = (): void => {
 
 const validateFile = async (
   file: File,
-  contractSource: DatevActiveContractSourceKind | undefined
+  contractSource: DatevActiveContractSourceKind | undefined,
+  operation: ValidationOperation
 ): Promise<void> => {
+  // Keep the repository stable for the complete validation operation.
   const repository = getContractRepository(contractSource);
   const sourceSummary = repository?.summary;
   if (!repository) {
     post({
+      ...operation,
       contractSource: sourceSummary,
       result: createRejectedResult(file.name, file.size, "unknown", [
         diagnostic(
@@ -294,6 +342,7 @@ const validateFile = async (
 
   if (!isDatevCsvFileName(file.name)) {
     post({
+      ...operation,
       contractSource: sourceSummary,
       result: createRejectedResult(file.name, file.size, "unknown", [
         diagnostic(
@@ -309,6 +358,7 @@ const validateFile = async (
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
     post({
+      ...operation,
       contractSource: sourceSummary,
       result: createRejectedResult(file.name, file.size, "unknown", [
         diagnostic(
@@ -322,12 +372,13 @@ const validateFile = async (
     return;
   }
 
-  post({ code: "read-file", type: "progress" });
+  post({ ...operation, code: "read-file", type: "progress" });
   let bytes: Uint8Array;
   try {
     bytes = await readFileBytes(file);
   } catch (error) {
     post({
+      ...operation,
       contractSource: sourceSummary,
       result: createRejectedResult(file.name, file.size, "unknown", [
         diagnostic(
@@ -344,10 +395,11 @@ const validateFile = async (
   }
 
   const sourceSha256 = await createSha256Hex(bytes);
-  post({ code: "decode-text", type: "progress" });
+  post({ ...operation, code: "decode-text", type: "progress" });
   const decoded = detectAndDecodeBytes(bytes);
   if (decoded.encoding === "unknown") {
     post({
+      ...operation,
       contractSource: sourceSummary,
       result: createRejectedResult(
         file.name,
@@ -361,8 +413,9 @@ const validateFile = async (
     return;
   }
 
-  post({ code: "validate-structure", type: "progress" });
+  post({ ...operation, code: "validate-structure", type: "progress" });
   post({
+    ...operation,
     contractSource: sourceSummary,
     result: validateDatevContent({
       content: decoded.content,
@@ -382,24 +435,27 @@ self.addEventListener(
   "message",
   (event: MessageEvent<WorkerValidationRequest>) => {
     const request = event.data;
-    void (async () => {
-      if (request.type === "load-contracts") {
-        await loadContractFiles(request.files);
-        return;
-      }
-      if (request.type === "create-editable-contract") {
-        createEditableContract(request.recognitionCode, request.contractSource);
-        return;
-      }
-      if (request.type === "save-editable-contract") {
-        saveEditableContract(request.draft);
-        return;
-      }
-      if (request.type === "discard-editable-contract") {
-        discardEditableContract();
-        return;
-      }
-      await validateFile(request.file, request.contractSource);
-    })();
+    if (request.type === "load-contracts") {
+      latestContractLoad.begin(request.operationId);
+      void loadContractFiles(request.files, request);
+      return;
+    }
+    if (request.type === "create-editable-contract") {
+      createEditableContract(
+        request.recognitionCode,
+        request.contractSource,
+        request
+      );
+      return;
+    }
+    if (request.type === "save-editable-contract") {
+      saveEditableContract(request.draft, request);
+      return;
+    }
+    if (request.type === "discard-editable-contract") {
+      discardEditableContract(request);
+      return;
+    }
+    void validateFile(request.file, request.contractSource, request);
   }
 );
