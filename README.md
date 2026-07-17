@@ -46,7 +46,8 @@ locally implemented DATEV CSV structural contract:
   built-in defaults, and are discarded with the browser session. Project
   contract XML uploads must use `.xml` file names. Parsing accepts a single safe leading XML
   declaration and rejects DOCTYPE declarations, entities, external references,
-  and arbitrary processing instructions before interpretation.
+  and arbitrary processing instructions before interpretation. The constrained
+  parser also enforces document, node, depth, text, and attribute limits.
 
 The status `valid` means only:
 
@@ -135,7 +136,8 @@ processing of DATEV files.
   kept only for the current session, and never uploaded or stored by the site.
 - Project contract XML files are interpreted only as a constrained local
   structural contract subset; raw XML is not rendered, exported, or persisted.
-  Files without a `.xml` name are rejected before parsing.
+  Files without a `.xml` name are rejected before parsing. Parser resource
+  limits fail closed before any contract source is activated.
 - Primary CSV/TXT validation files without `.csv` or `.txt` names are rejected
   before parsing.
 - Edited session-local contract copies are derived and applied only in browser

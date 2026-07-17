@@ -152,6 +152,18 @@ const parseSupportedXml = (
   }
 
   const parsed = parseXmlSubset(xmlWithoutDeclaration);
+  if (parsed.limitExceeded) {
+    return {
+      diagnostics: [
+        diagnostic(
+          "error",
+          "XML_CONTRACT_LIMIT_EXCEEDED",
+          "The local project contract XML exceeds a supported parser limit.",
+          { fieldName: `xml-file-${fileIndex}` }
+        ),
+      ],
+    };
+  }
   if (!parsed.root) {
     diagnostics.push(
       diagnostic(
