@@ -64,6 +64,51 @@ export const validGlAccountDescriptionCsv = (): string =>
     csvLine(["1000", "Kasse", "de", "Kasse lang"]),
   ].join("\r\n");
 
+export interface SyntheticSizedCsv {
+  readonly content: string;
+  readonly dataRecordCount: number;
+  readonly sizeBytes: number;
+  readonly targetBytes: number;
+}
+
+export const syntheticSizedGlAccountDescriptionCsv = (
+  targetBytes: number
+): SyntheticSizedCsv => {
+  if (!Number.isSafeInteger(targetBytes) || targetBytes <= 0) {
+    throw new Error(
+      "Synthetic CSV target size must be a positive safe integer"
+    );
+  }
+
+  const prefix = [
+    headerLine(),
+    contractCaptionLine("datev-gl-account-description-v3"),
+    "",
+  ].join("\r\n");
+  const dataRow = '1;"Synthetic performance row";;"X"';
+  const firstRecordBytes = Buffer.byteLength(`${prefix}${dataRow}`, "utf8");
+  if (targetBytes < firstRecordBytes) {
+    throw new Error(
+      "Synthetic CSV target size is smaller than one valid record"
+    );
+  }
+
+  const additionalRecord = `\r\n${dataRow}`;
+  const additionalRecordBytes = Buffer.byteLength(additionalRecord, "utf8");
+  const dataRecordCount =
+    1 + Math.floor((targetBytes - firstRecordBytes) / additionalRecordBytes);
+  const content = `${prefix}${dataRow}${additionalRecord.repeat(
+    dataRecordCount - 1
+  )}`;
+
+  return {
+    content,
+    dataRecordCount,
+    sizeBytes: Buffer.byteLength(content, "utf8"),
+    targetBytes,
+  };
+};
+
 export const bookingBatchHeaderLine = (): string =>
   headerFor("21", "Buchungsstapel", "13");
 
