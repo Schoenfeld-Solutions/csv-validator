@@ -26,8 +26,8 @@
 
 ## Setup And Checks
 
-- Node.js `25.6.1` is the validated baseline; `package.json` allows compatible
-  Node 25+ versions.
+- Node.js `26.5.0` is the validated baseline; `package.json` allows compatible
+  Node 26 versions through the explicit `>=26.0.0 <27` engine range.
 - Install dependencies with `npm ci`.
 - Fast check after small documentation or tooling changes:
   `npm run check:governance`, `npm run format:check`, `git diff --check`.

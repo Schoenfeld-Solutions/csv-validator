@@ -4,6 +4,9 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const errors = [];
+const expectedNodeVersion = "26.5.0";
+const expectedNodeEngine = ">=26.0.0 <27";
+const expectedNpmVersion = "11.9.0";
 
 const requiredFiles = [
   "AGENTS.md",
@@ -140,11 +143,49 @@ const validateDependencyAuditWorkflow = async () => {
     "contents: read",
     "pull-requests: read",
     "name: Dependency Audit",
+    "node-version-file: .node-version",
     "run: test -f package-lock.json",
     "run: npm ci",
     "run: npm run audit:ci",
   ]) {
     requireSnippet(path, text, snippet);
+  }
+};
+
+const validateRuntimeBaseline = async () => {
+  const nodeVersion = (await readText(".node-version")).trim();
+  const packageJson = JSON.parse(await readText("package.json"));
+
+  if (nodeVersion !== expectedNodeVersion) {
+    errors.push(
+      `.node-version must be ${expectedNodeVersion}, received ${nodeVersion}`
+    );
+  }
+  if (packageJson.engines?.node !== expectedNodeEngine) {
+    errors.push(`package.json engines.node must be ${expectedNodeEngine}`);
+  }
+  if (packageJson.volta?.node !== expectedNodeVersion) {
+    errors.push(`package.json volta.node must be ${expectedNodeVersion}`);
+  }
+  if (packageJson.volta?.npm !== expectedNpmVersion) {
+    errors.push(`package.json volta.npm must be ${expectedNpmVersion}`);
+  }
+  if (packageJson.packageManager !== `npm@${expectedNpmVersion}`) {
+    errors.push(
+      `package.json packageManager must be npm@${expectedNpmVersion}`
+    );
+  }
+
+  for (const documentationPath of [
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "README.md",
+  ]) {
+    requireSnippet(
+      documentationPath,
+      await readText(documentationPath),
+      `Node.js \`${expectedNodeVersion}\``
+    );
   }
 };
 
@@ -377,6 +418,7 @@ await validatePagesWorkflow();
 await validateDependencyAuditWorkflow();
 await validateDependabot();
 await validateIgnores();
+await validateRuntimeBaseline();
 await validatePackageScripts();
 await validatePreflight();
 await validateDocumentation();

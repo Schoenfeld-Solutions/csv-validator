@@ -4,8 +4,9 @@ This project should remain small, auditable, and statically deployable.
 
 ## Development Baseline
 
-- Node.js `25.6.1` or compatible with `>=25`.
-- npm is the package manager.
+- Node.js `26.5.0` or another compatible Node 26 release matching
+  `>=26.0.0 <27`.
+- npm `11.9.0` or compatible with `>=11` is the package manager.
 - TypeScript stays strict.
 - Runtime code stays framework-light: Astro for the static site, vanilla
   TypeScript for browser interaction, and a Web Worker for file parsing.
