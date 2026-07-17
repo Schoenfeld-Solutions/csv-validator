@@ -8,6 +8,7 @@ import {
   headerLine,
   validGlAccountDescriptionCsv,
 } from "../unit/datev-test-fixtures";
+import { BUILT_IN_CONTRACT_REPOSITORY } from "../../src/lib/datev/contracts";
 
 const appOrigin = "http://127.0.0.1:4321";
 
@@ -45,6 +46,70 @@ const validCustomContractCsv = (): string =>
     csvLine(["Konto", "Beschriftung", "Datum"]),
     csvLine(["1000", "custom-hidden-value", "0101"]),
   ].join("\r\n");
+
+const formatDescriptionRuleSentinel =
+  "synthetic-format-description-rule-content";
+
+const escapeXml = (value: string): string =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+
+const xmlElement = (name: string, value: string): string =>
+  `<${name}>${escapeXml(value)}</${name}>`;
+
+const builtInEquivalentFormatDescriptionXml = (): string => {
+  const recognitionCode = "datev-gl-account-description-v3";
+  const recognition = BUILT_IN_CONTRACT_REPOSITORY.listRecognitions().find(
+    (item) => item.recognitionCode === recognitionCode
+  );
+  const fields = BUILT_IN_CONTRACT_REPOSITORY.getFields(recognitionCode);
+  const rules = BUILT_IN_CONTRACT_REPOSITORY.getRules(recognitionCode);
+  if (!recognition || !fields || !rules) {
+    throw new Error("Missing built-in format-description E2E facts");
+  }
+  const fieldXml = fields.map((field, index) => {
+    const rule = rules[index];
+    if (!rule) throw new Error("Missing built-in format-description E2E rule");
+    return [
+      "<Field>",
+      xmlElement("OrdinalNumber", String(index)),
+      xmlElement(
+        "Label",
+        index === 0 ? "Synthetic non-authoritative caption" : field.caption
+      ),
+      xmlElement("FormatType", rule.formatType),
+      xmlElement("Length", String(rule.maxLength)),
+      xmlElement("DecimalPlaces", String(rule.decimalPlaces)),
+      xmlElement("Necessary", rule.necessary ? "1" : "0"),
+      rule.formatExpression
+        ? xmlElement("FormatExpression", rule.formatExpression)
+        : "",
+      index === 0
+        ? xmlElement("CalculationRule", formatDescriptionRuleSentinel)
+        : "",
+      "</Field>",
+    ].join("");
+  });
+
+  return [
+    "<FormatDescription>",
+    "<Format>",
+    xmlElement("Name", recognition.formatName),
+    xmlElement("Version", recognition.formatVersion),
+    "</Format>",
+    "<CsvFormatProperties>",
+    xmlElement("SeperatorField", ";"),
+    xmlElement("SeperatorText", '"'),
+    xmlElement("DoubleTextSeperator", "1"),
+    "</CsvFormatProperties>",
+    ...fieldXml,
+    "</FormatDescription>",
+  ].join("");
+};
 
 const overridingGlAccountContractXml = (): string =>
   validCustomContractXml({
@@ -216,7 +281,7 @@ const controlledValidationResponse = ({
     kind: contractSourceKind,
     label:
       contractSourceKind === "mixed"
-        ? "Built-in plus loaded project contract XML files"
+        ? "Built-in plus loaded local contract XML files"
         : "Built-in local contracts",
     overrideCount: 0,
     warningCount: 0,
@@ -381,7 +446,7 @@ test("loads German and English validator routes with language switch", async ({
   ).toBeVisible();
   await expect(
     page.getByText(
-      "Optional: Projektvertrags-XML-Dateien lokal laden und die nächste CSV/TXT-Datei gegen diese Sitzungsquelle prüfen. Es findet kein Upload statt."
+      "Optional: Projektvertrags-XML oder unterstützte DATEV-Formatbeschreibungs-XML lokal laden. Bekannte Formatbeschreibungen verwenden den passenden eingebauten Strukturvertrag als sicheren Fallback. Es findet kein Upload statt."
     )
   ).toBeVisible();
   await expect(page.getByText(/DATEV-Format-XML/i)).toHaveCount(0);
@@ -401,7 +466,7 @@ test("loads German and English validator routes with language switch", async ({
   ).toBeVisible();
   await expect(
     page.getByText(
-      "Optional: load project contract XML files locally and validate the next CSV/TXT file against that session source. No upload takes place."
+      "Optional: load project contract XML or supported DATEV format-description XML locally. Known format descriptions use the matching built-in structural contract as a safe fallback. No upload takes place."
     )
   ).toBeVisible();
   await expect(page.getByText(/DATEV format XML/i)).toHaveCount(0);
@@ -833,10 +898,10 @@ test("clears stale validation exports while XML contracts are loading", async ({
   await expect(jsonButton).toBeDisabled();
   await expect(htmlButton).toBeDisabled();
   await expect(page.locator("#statusLine")).toHaveText(
-    "Reading local project contract XML files."
+    "Reading local contract XML files."
   );
   await expect(page.locator("#xmlContractStatus")).toContainText(
-    "Loading 1 project contract XML file locally"
+    "Loading 1 local contract XML file locally"
   );
 });
 
@@ -883,7 +948,7 @@ test("clears stale validation exports while contract source revalidation is pend
               ? {
                   contractCount: 1,
                   kind: "mixed",
-                  label: "Built-in plus uploaded project contract XML",
+                  label: "Built-in plus uploaded local contract XML",
                   overrideCount: 0,
                   warningCount: 0,
                 }
@@ -941,14 +1006,14 @@ test("clears stale validation exports while contract source revalidation is pend
               mixedSummary: {
                 contractCount: 1,
                 kind: "mixed",
-                label: "Built-in plus uploaded project contract XML",
+                label: "Built-in plus uploaded local contract XML",
                 overrideCount: 0,
                 warningCount: 0,
               },
               summary: {
                 contractCount: 1,
                 kind: "uploaded",
-                label: "Uploaded project contract XML",
+                label: "Uploaded local contract XML",
                 overrideCount: 0,
                 warningCount: 0,
               },
@@ -1000,7 +1065,7 @@ test("clears stale validation exports while contract source revalidation is pend
 
   await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Built-in plus loaded project contract XML files"
+    "Built-in plus loaded local contract XML files"
   );
   await expect(copyButton).toBeEnabled();
   await expect(jsonButton).toBeEnabled();
@@ -1125,7 +1190,7 @@ test("keeps only the latest file result, preview, progress, and exports", async 
   expect(copiedJson).not.toContain("stale-preview-value");
 });
 
-test("keeps only the latest project contract XML load", async ({ page }) => {
+test("keeps only the latest local contract XML load", async ({ page }) => {
   await page.addInitScript(installControlledWorker);
   await page.goto("/csv-validator/en/");
 
@@ -1174,12 +1239,12 @@ test("keeps only the latest project contract XML load", async ({ page }) => {
     type: "contracts",
   });
   await expect(page.locator("#xmlContractStatus")).toHaveText(
-    "2 project contract XML files loaded locally."
+    "2 local contract XML files loaded locally."
   );
   await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
   await expect(
     page.locator('#contractSourceSelect option[value="uploaded"]')
-  ).toHaveText("Use 2 loaded project contract XML files");
+  ).toHaveText("Use 2 loaded local contract XML files");
 
   await emitControlledWorkerMessage(page, {
     diagnostics: [],
@@ -1209,12 +1274,12 @@ test("keeps only the latest project contract XML load", async ({ page }) => {
   });
 
   await expect(page.locator("#xmlContractStatus")).toHaveText(
-    "2 project contract XML files loaded locally."
+    "2 local contract XML files loaded locally."
   );
   await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
   await expect(
     page.locator('#contractSourceSelect option[value="uploaded"]')
-  ).toHaveText("Use 2 loaded project contract XML files");
+  ).toHaveText("Use 2 loaded local contract XML files");
 });
 
 test("ignores a validation result superseded by a contract source switch", async ({
@@ -1710,7 +1775,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   });
 
   await expect(page.locator("#xmlContractStatus")).toContainText(
-    "1 project contract XML file loaded locally"
+    "1 local contract XML file loaded locally"
   );
   await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
 
@@ -1739,7 +1804,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
     "synthetic-format-v1"
   );
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Built-in plus loaded project contract XML files"
+    "Built-in plus loaded local contract XML files"
   );
   await expect(
     page
@@ -1787,9 +1852,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
   expectHtmlReportToBeLocalOnly(htmlReport);
-  expect(htmlReport).toContain(
-    "Built-in plus loaded project contract XML files"
-  );
+  expect(htmlReport).toContain("Built-in plus loaded local contract XML files");
   expect(htmlReport).toContain("<dt>Contract count</dt><dd>13</dd>");
   expect(htmlReport).toContain("<dt>Overrides</dt><dd>0</dd>");
   expect(htmlReport).toContain("<dt>Contract warnings</dt><dd>0</dd>");
@@ -1816,7 +1879,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
     "datev-gl-account-description-v3"
   );
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Built-in plus loaded project contract XML files"
+    "Built-in plus loaded local contract XML files"
   );
   await expect(page.locator("#contractSourceWarning")).toBeHidden();
 
@@ -1840,7 +1903,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   }, validCustomContractCsv());
 
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Loaded project contract XML files (1)"
+    "Loaded local contract XML files (1)"
   );
 
   await page.locator("#contractSourceSelect").selectOption("built-in");
@@ -1854,6 +1917,97 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   await expect(page.locator("#metaContractSource")).toContainText(
     "Built-in local contracts"
   );
+});
+
+test("maps a built-in-equivalent format description without exposing XML rule text", async ({
+  page,
+}) => {
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(builtInEquivalentFormatDescriptionXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "synthetic-format-description.xml",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toContainText(
+    "1 local contract XML file loaded locally, 1 warning"
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+  await dropCsvOnValidator(
+    page,
+    validGlAccountDescriptionCsv(),
+    "format-description.csv"
+  );
+
+  await expect(
+    page.getByText(
+      "Valid against the implemented local structural DATEV CSV contract."
+    )
+  ).toBeVisible();
+  await expect(page.locator("#metaRecognition")).toHaveText(
+    "datev-gl-account-description-v3"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in plus loaded local contract XML files (12)"
+  );
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "1 format-description fallback"
+  );
+  await expect(page.locator("#metaContractSource")).not.toContainText(
+    "override"
+  );
+  await expect(page.locator("#contractSourceWarning")).toContainText(
+    "Built-in captions and runtime rules remain authoritative."
+  );
+  await expect(
+    page.locator("#reportFacts div").filter({
+      hasText: /^Format-description fallback\s*1 DATEV format description/,
+    })
+  ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(
+    formatDescriptionRuleSentinel
+  );
+  await expect(page.locator("body")).not.toContainText(
+    "Synthetic non-authoritative caption"
+  );
+
+  await page.evaluate(() => {
+    const writableWindow = window as Window & { __formatXmlJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          writableWindow.__formatXmlJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () =>
+      (window as Window & { __formatXmlJson?: string }).__formatXmlJson ?? ""
+  );
+  expect(copiedJson).not.toContain(formatDescriptionRuleSentinel);
+  expect(copiedJson).not.toContain("FormatDescription");
+
+  const jsonReport = await downloadJsonReport(page);
+  expect(jsonReport).not.toContain(formatDescriptionRuleSentinel);
+  expect(jsonReport).not.toContain("FormatDescription");
+
+  const htmlDownloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download HTML report" }).click();
+  const htmlDownload = await htmlDownloadPromise;
+  const htmlPath = await htmlDownload.path();
+  expect(htmlPath).toBeTruthy();
+  const htmlReport = await readFile(htmlPath ?? "", "utf8");
+  expectHtmlReportToBeLocalOnly(htmlReport);
+  expect(htmlReport).toContain("Format-description fallback");
+  expect(htmlReport).toContain(
+    "Built-in captions and runtime rules remain authoritative."
+  );
+  expect(htmlReport).not.toContain(formatDescriptionRuleSentinel);
+  expect(htmlReport).not.toContain("Synthetic non-authoritative caption");
 });
 
 test("applies and discards a session-local contract edit without exposing raw values", async ({

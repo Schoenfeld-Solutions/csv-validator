@@ -254,7 +254,8 @@ const formatContractSource = (
           : copy.contractSource.builtInSummary;
   const details = copy.contractSource.summaryDetails(
     summary.overrideCount,
-    summary.warningCount
+    summary.warningCount,
+    summary.formatDescriptionFallbackCount ?? 0
   );
   return details ? `${base} (${details})` : base;
 };
@@ -690,19 +691,24 @@ const renderContractSourceWarning = (
   contractSource: DatevContractSourceSummary | undefined
 ): void => {
   const overrideCount = contractSource?.overrideCount ?? 0;
+  const warnings: string[] = [];
   if (contractSource?.kind === "mixed" && overrideCount > 0) {
-    contractSourceWarning.hidden = false;
-    contractSourceWarning.textContent =
-      copy.contractSource.overrideWarning(overrideCount);
-    return;
+    warnings.push(copy.contractSource.overrideWarning(overrideCount));
+  }
+  const formatDescriptionFallbackCount =
+    contractSource?.formatDescriptionFallbackCount ?? 0;
+  if (formatDescriptionFallbackCount > 0) {
+    warnings.push(
+      copy.contractSource.formatDescriptionFallbackWarning(
+        formatDescriptionFallbackCount
+      )
+    );
   }
   if (contractSource?.kind === "edited-session") {
-    contractSourceWarning.hidden = false;
-    contractSourceWarning.textContent = copy.contractSource.editedWarning;
-    return;
+    warnings.push(copy.contractSource.editedWarning);
   }
-  contractSourceWarning.hidden = true;
-  contractSourceWarning.textContent = "";
+  contractSourceWarning.hidden = warnings.length === 0;
+  contractSourceWarning.textContent = warnings.join(" ");
 };
 
 const renderValidationReport = (
@@ -795,6 +801,17 @@ const renderReportFacts = (
       copy.contractSource.overrideWarningLabel,
       copy.contractSource.overrideWarning(
         report.contractSourceSummary.overrideCount
+      )
+    );
+  }
+  const reportFormatDescriptionFallbackCount =
+    report.contractSourceSummary?.formatDescriptionFallbackCount ?? 0;
+  if (reportFormatDescriptionFallbackCount > 0) {
+    appendFact(
+      reportFacts,
+      copy.contractSource.formatDescriptionFallbackWarningLabel,
+      copy.contractSource.formatDescriptionFallbackWarning(
+        reportFormatDescriptionFallbackCount
       )
     );
   }
@@ -1071,6 +1088,17 @@ const createHtmlReport = (
               copy.contractSource.overrideWarningLabel,
               copy.contractSource.overrideWarning(
                 report.contractSourceSummary.overrideCount
+              )
+            )
+          : ""
+      }
+      ${
+        (report.contractSourceSummary?.formatDescriptionFallbackCount ?? 0) > 0
+          ? createFactHtml(
+              copy.contractSource.formatDescriptionFallbackWarningLabel,
+              copy.contractSource.formatDescriptionFallbackWarning(
+                report.contractSourceSummary?.formatDescriptionFallbackCount ??
+                  0
               )
             )
           : ""

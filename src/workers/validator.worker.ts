@@ -137,7 +137,7 @@ const loadContractFiles = async (
         diagnostic(
           "error",
           "XML_CONTRACT_SET_EMPTY",
-          "At least one local project contract XML file is required."
+          "At least one local contract XML file is required."
         ),
       ],
       type: "contracts",
@@ -151,7 +151,7 @@ const loadContractFiles = async (
         diagnostic(
           "error",
           "XML_CONTRACT_FILE_LIMIT",
-          "The selected local project contract XML set contains too many files."
+          "The selected local contract XML set contains too many files."
         ),
       ],
       type: "contracts",
@@ -167,7 +167,7 @@ const loadContractFiles = async (
         diagnostic(
           "error",
           "XML_CONTRACT_FILE_TYPE_UNSUPPORTED",
-          "Local project contract XML uploads must use .xml files.",
+          "Local contract XML uploads must use .xml files.",
           { fieldName: safeFileName(file.name) }
         )
       );
@@ -178,7 +178,7 @@ const loadContractFiles = async (
         diagnostic(
           "error",
           "XML_CONTRACT_FILE_TOO_LARGE",
-          "A local project contract XML file exceeds the documented 2 MiB limit.",
+          "A local contract XML file exceeds the documented 2 MiB limit.",
           { fieldName: safeFileName(file.name) }
         )
       );
@@ -189,7 +189,7 @@ const loadContractFiles = async (
       diagnostic(
         "error",
         "XML_CONTRACT_SET_TOO_LARGE",
-        "The local project contract XML set exceeds the documented 10 MiB limit."
+        "The local contract XML set exceeds the documented 10 MiB limit."
       )
     );
   }
@@ -225,7 +225,7 @@ const loadContractFiles = async (
         diagnostic(
           "error",
           "XML_CONTRACT_READ_FAILED",
-          "A local project contract XML file could not be read in the browser worker.",
+          "A local contract XML file could not be read in the browser worker.",
           { fieldName: safeFileName(file.name) }
         )
       );

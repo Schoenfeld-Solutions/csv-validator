@@ -1,4 +1,9 @@
 import { diagnostic } from "./diagnostics";
+import {
+  importDatevFormatDescription,
+  isDatevFormatDescriptionRoot,
+  type DatevFormatDescriptionContract,
+} from "./format-description-xml";
 import { parseXmlSubset, type XmlNode } from "./xml-subset";
 import type {
   DatevContractRepository,
@@ -32,13 +37,39 @@ export interface DatevXmlContractImportResult {
 
 export const importDatevXmlContractSet = (
   xmlFiles: readonly string[],
-  label = "Uploaded project contract XML"
+  label?: string
 ): DatevXmlContractImportResult => {
   const diagnostics: DatevDiagnostic[] = [];
   const recognitions: DatevRecognitionContract[] = [];
   const fieldsByCode = new Map<string, readonly DatevFieldContract[]>();
   const rulesByCode = new Map<string, readonly DatevFieldRuleContract[]>();
   const seenSignatures = new Set<string>();
+  const sourceKinds = new Set<"project" | "format-description">();
+  let formatDescriptionFallbackCount = 0;
+
+  const addContract = (contract: DatevFormatDescriptionContract): boolean => {
+    const { fields, recognition, rules } = contract;
+    const signature = [
+      recognition.formatCategory,
+      recognition.formatName,
+      recognition.formatVersion,
+    ].join("\u0000");
+    if (seenSignatures.has(signature)) {
+      diagnostics.push(
+        diagnostic(
+          "error",
+          "XML_CONTRACT_DUPLICATE_SIGNATURE",
+          "A local XML contract set must not contain duplicate format signatures."
+        )
+      );
+      return false;
+    }
+    seenSignatures.add(signature);
+    recognitions.push(recognition);
+    fieldsByCode.set(recognition.recognitionCode, fields);
+    rulesByCode.set(recognition.recognitionCode, rules);
+    return true;
+  };
 
   if (xmlFiles.length === 0) {
     return {
@@ -46,7 +77,7 @@ export const importDatevXmlContractSet = (
         diagnostic(
           "error",
           "XML_CONTRACT_SET_EMPTY",
-          "At least one local project contract XML file is required."
+          "At least one local contract XML file is required."
         ),
       ],
     };
@@ -57,31 +88,24 @@ export const importDatevXmlContractSet = (
     diagnostics.push(...parsed.diagnostics);
     if (!parsed.root) continue;
 
+    if (isDatevFormatDescriptionRoot(parsed.root)) {
+      const converted = importDatevFormatDescription(
+        parsed.root,
+        fileIndex + 1
+      );
+      diagnostics.push(...converted.diagnostics);
+      if (converted.contract && addContract(converted.contract)) {
+        sourceKinds.add("format-description");
+        formatDescriptionFallbackCount += 1;
+      }
+      continue;
+    }
+
     for (const contract of childrenNamed(parsed.root, "contract")) {
       const converted = convertContract(contract, fileIndex + 1);
       diagnostics.push(...converted.diagnostics);
       if (!converted.contract) continue;
-
-      const { fields, recognition, rules } = converted.contract;
-      const signature = [
-        recognition.formatCategory,
-        recognition.formatName,
-        recognition.formatVersion,
-      ].join("\u0000");
-      if (seenSignatures.has(signature)) {
-        diagnostics.push(
-          diagnostic(
-            "error",
-            "XML_CONTRACT_DUPLICATE_SIGNATURE",
-            "A local project contract XML set must not contain duplicate format signatures."
-          )
-        );
-        continue;
-      }
-      seenSignatures.add(signature);
-      recognitions.push(recognition);
-      fieldsByCode.set(recognition.recognitionCode, fields);
-      rulesByCode.set(recognition.recognitionCode, rules);
+      if (addContract(converted.contract)) sourceKinds.add("project");
     }
   }
 
@@ -95,7 +119,7 @@ export const importDatevXmlContractSet = (
         diagnostic(
           "error",
           "XML_CONTRACT_NONE_SUPPORTED",
-          "No supported project contract XML files were found."
+          "No supported local contract XML files were found."
         ),
       ],
     };
@@ -120,8 +144,9 @@ export const importDatevXmlContractSet = (
       listRecognitions: () => recognitions,
       summary: {
         contractCount: recognitions.length,
+        formatDescriptionFallbackCount,
         kind: "uploaded",
-        label,
+        label: label ?? sourceLabel(sourceKinds),
         overrideCount: 0,
         warningCount: diagnostics.filter((item) => item.severity === "warning")
           .length,
@@ -129,6 +154,15 @@ export const importDatevXmlContractSet = (
     },
   };
 };
+
+const sourceLabel = (
+  sourceKinds: ReadonlySet<"project" | "format-description">
+): string =>
+  sourceKinds.size === 1 && sourceKinds.has("project")
+    ? "Uploaded project contract XML"
+    : sourceKinds.size === 1 && sourceKinds.has("format-description")
+      ? "Loaded format-description XML with built-in fallback"
+      : "Loaded local XML contracts";
 
 const parseSupportedXml = (
   xml: string,
@@ -145,7 +179,7 @@ const parseSupportedXml = (
         diagnostic(
           "error",
           "XML_CONTRACT_SECURITY_UNSUPPORTED",
-          "Local project contract XML files must not contain declarations, entities, or external references."
+          "Local contract XML files must not contain declarations, entities, or external references."
         ),
       ],
     };
@@ -158,7 +192,7 @@ const parseSupportedXml = (
         diagnostic(
           "error",
           "XML_CONTRACT_LIMIT_EXCEEDED",
-          "The local project contract XML exceeds a supported parser limit.",
+          "The local contract XML exceeds a supported parser limit.",
           { fieldName: `xml-file-${fileIndex}` }
         ),
       ],
@@ -169,7 +203,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_MALFORMED",
-        "The local project contract XML could not be parsed."
+        "The local contract XML could not be parsed."
       )
     );
     if (parsed.unsupportedNode) {
@@ -177,7 +211,7 @@ const parseSupportedXml = (
         diagnostic(
           "error",
           "XML_CONTRACT_NODE_UNSUPPORTED",
-          "The local project contract XML contains unsupported XML node syntax."
+          "The local contract XML contains unsupported XML node syntax."
         )
       );
     }
@@ -186,6 +220,35 @@ const parseSupportedXml = (
         ...item,
         fieldName: item.fieldName ?? `xml-file-${fileIndex}`,
       })),
+    };
+  }
+  if (parsed.trailingText) {
+    diagnostics.push(
+      diagnostic(
+        "error",
+        "XML_CONTRACT_MALFORMED",
+        "The local XML contract file contains content outside the root element."
+      )
+    );
+  }
+  if (parsed.unsupportedNode) {
+    diagnostics.push(
+      diagnostic(
+        "error",
+        "XML_CONTRACT_NODE_UNSUPPORTED",
+        "The local XML contract file contains unsupported XML node syntax."
+      )
+    );
+  }
+  if (isDatevFormatDescriptionRoot(parsed.root)) {
+    return {
+      diagnostics: diagnostics.map((item) => ({
+        ...item,
+        fieldName: item.fieldName ?? `xml-file-${fileIndex}`,
+      })),
+      root: diagnostics.some((item) => item.severity === "error")
+        ? undefined
+        : parsed.root,
     };
   }
   if (parsed.root.name !== SUPPORTED_ROOT) {
@@ -203,24 +266,6 @@ const parseSupportedXml = (
         "error",
         "XML_CONTRACT_VERSION_UNSUPPORTED",
         "The local project contract XML version is not supported."
-      )
-    );
-  }
-  if (parsed.trailingText) {
-    diagnostics.push(
-      diagnostic(
-        "error",
-        "XML_CONTRACT_MALFORMED",
-        "The local project contract XML contains content outside the root element."
-      )
-    );
-  }
-  if (parsed.unsupportedNode) {
-    diagnostics.push(
-      diagnostic(
-        "error",
-        "XML_CONTRACT_NODE_UNSUPPORTED",
-        "The local project contract XML contains unsupported XML node syntax."
       )
     );
   }

@@ -77,6 +77,7 @@ export interface DatevContractSourceSummary {
   readonly contractCount: number;
   readonly overrideCount: number;
   readonly warningCount: number;
+  readonly formatDescriptionFallbackCount?: number;
 }
 
 export interface DatevContractRepository {

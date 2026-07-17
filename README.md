@@ -36,18 +36,20 @@ locally implemented DATEV CSV structural contract:
   explicit user action.
 - An optional local data preview for the first parsed rows after explicit user
   approval. Preview values are not exported.
-- An advanced local project contract XML mode that lets users load
-  session-local project contract XML files in the browser worker and explicitly
-  validate CSV/TXT files against built-in, uploaded-only, mixed built-in plus
-  uploaded, or edited session-local contract sources. Mixed mode uses uploaded
-  matching signatures first and shows an override warning when uploaded project
-  contract XML files replace built-in structural facts for the current session. Edited
-  session-local contracts are cloned from the active local source, never mutate
-  built-in defaults, and are discarded with the browser session. Project
-  contract XML uploads must use `.xml` file names. Parsing accepts a single safe leading XML
-  declaration and rejects DOCTYPE declarations, entities, external references,
-  and arbitrary processing instructions before interpretation. The constrained
-  parser also enforces document, node, depth, text, and attribute limits.
+- An advanced local XML contract mode that accepts the project contract XML
+  shape and built-in-equivalent DATEV format-description XML. A format
+  description becomes active only when its name, version, CSV properties,
+  field order, types, lengths, decimal places, required flags, and supported
+  expressions exactly match one built-in structural contract. In that case,
+  built-in captions and runtime rules remain authoritative and the UI shows a
+  fallback warning. Unknown or structurally different format versions remain
+  unsupported; the tool does not infer marker or category metadata.
+- Session-local XML sources can be used as uploaded-only or mixed with built-in
+  contracts. Edited session contracts never mutate built-in defaults and are
+  discarded with the browser session. XML uploads must use `.xml` file names.
+  Parsing accepts a single safe leading XML declaration and rejects DOCTYPE
+  declarations, entities, external references, arbitrary processing
+  instructions, unsupported nodes, and resource-limit violations.
 
 The status `valid` means only:
 
@@ -132,18 +134,21 @@ processing of DATEV files.
 - Reports may include a SHA-256 content fingerprint after the browser worker
   reads a file. The hash is not a raw data value, but it can identify the exact
   file if the report is shared.
-- Uploaded project contract XML files are parsed locally in the browser worker,
-  kept only for the current session, and never uploaded or stored by the site.
-- Project contract XML files are interpreted only as a constrained local
-  structural contract subset; raw XML is not rendered, exported, or persisted.
-  Files without a `.xml` name are rejected before parsing. Parser resource
-  limits fail closed before any contract source is activated.
+- Local contract XML files are parsed in the browser worker, kept only for the
+  current session, and never uploaded or stored by the site.
+- Project contract XML is interpreted only as the documented constrained local
+  subset. Supported format-description XML is mapped only to an exactly
+  equivalent built-in structural contract; its captions and rule text are not
+  executed. Raw XML is not rendered, exported, or persisted. Files without a
+  `.xml` name and parser resource-limit violations fail closed before source
+  activation.
 - Primary CSV/TXT validation files without `.csv` or `.txt` names are rejected
   before parsing.
 - Edited session-local contract copies are derived and applied only in browser
   memory. Built-in contract data is not modified.
-- Contract-source labels, counts, and override warnings are local UI/report
-  metadata and do not add raw XML or CSV/TXT values to JSON or HTML reports.
+- Contract-source labels, counts, override warnings, and format-description
+  fallback counts are local UI/report metadata and do not add raw XML or
+  CSV/TXT values to JSON or HTML reports.
 - File contents are not displayed as raw data in the UI by default.
 - The optional data preview is disabled by default, stays in the browser, and
   is not included in JSON or HTML reports.
