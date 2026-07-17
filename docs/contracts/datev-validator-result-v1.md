@@ -21,15 +21,15 @@ That HTML report is a user-facing rendering artifact, not a replacement for
 the machine-readable result schema below. It must not include raw CSV/TXT data
 values.
 
-The browser worker may also use a session-local uploaded DATEV format XML
-contract source, either uploaded-only or mixed with built-in contracts. It may
+The browser worker may also use a session-local uploaded project contract XML
+source, either uploaded-only or mixed with built-in contracts. It may
 also use a session-local edited contract clone derived from the active local
 source. Edited contracts are browser-session state, do not mutate built-in
 defaults, and are discarded when the session ends. Contract-source labels,
 counts, and override warnings are UI/report metadata and are intentionally
 outside this stable JSON result schema.
 
-Uploaded XML contract files are interpreted only as a constrained local
+Uploaded project contract XML files are interpreted only as a constrained local
 structural contract subset. Files without a `.xml` name are rejected before
 parsing. A single safe leading XML declaration may be accepted, while DOCTYPE
 declarations, entities, external references, and arbitrary processing

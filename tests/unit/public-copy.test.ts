@@ -45,6 +45,19 @@ describe("public copy checks", () => {
     }
   });
 
+  it("rejects unsupported DATEV XML compatibility claims in public copy", () => {
+    for (const claim of [
+      ["DATEV", "format", "XML"].join(" "),
+      ["DATEV", "XML", "contract"].join(" "),
+      ["DATEV", "Format", "XML"].join("-"),
+      ["DATEV", "XML", "Vertrag"].join("-"),
+    ]) {
+      expect(() => assertPublicCopy(claim, "sample.md")).toThrow(
+        /unsupported DATEV format-XML compatibility claim/
+      );
+    }
+  });
+
   it("treats src files as public source copy", () => {
     expect(isPublicSourceFile("src/lib/i18n.ts")).toBe(true);
     expect(isPublicSourceFile("src/components/ValidatorApp.astro")).toBe(true);

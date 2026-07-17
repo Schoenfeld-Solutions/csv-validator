@@ -94,9 +94,10 @@ export const appCopy = {
     processing: "wird lokal verarbeitet",
     processed: "lokal im Browser verarbeitet",
     progress: {
-      "read-xml-contracts": "Lokale DATEV-XML-Verträge werden gelesen.",
+      "read-xml-contracts":
+        "Lokale Projektvertrags-XML-Dateien werden gelesen.",
       "build-xml-contract-source":
-        "Lokale DATEV-XML-Vertragsquelle wird aufgebaut.",
+        "Lokale Projektvertrags-XML-Quelle wird aufgebaut.",
       "read-file": "Datei wird im Browser-Worker gelesen.",
       "decode-text": "Text wird deterministisch dekodiert.",
       "validate-structure": "Lokale DATEV-CSV-Struktur wird geprüft.",
@@ -130,18 +131,24 @@ export const appCopy = {
     },
     contractSource: {
       kicker: "Erweiterter lokaler Vertrag",
-      copy: "Optional: DATEV-Format-XML-Dateien lokal laden und die nächste CSV/TXT-Datei gegen diese Sitzungsversion prüfen. Es findet kein Upload statt.",
-      upload: "XML-Vertrag laden",
+      copy: "Optional: Projektvertrags-XML-Dateien lokal laden und die nächste CSV/TXT-Datei gegen diese Sitzungsquelle prüfen. Es findet kein Upload statt.",
+      upload: "Projektvertrags-XML laden",
       selectLabel: "Aktive Quelle",
       builtInOption: "Eingebaute Verträge",
-      uploadedUnavailable: "Geladene XML-Verträge nicht verfügbar",
-      mixedUnavailable: "Eingebaute plus XML-Verträge nicht verfügbar",
+      uploadedUnavailable:
+        "Geladene Projektvertrags-XML-Dateien nicht verfügbar",
+      mixedUnavailable:
+        "Eingebaute plus Projektvertrags-XML-Dateien nicht verfügbar",
       editedUnavailable: "Bearbeiteter Sitzungsvertrag nicht verfügbar",
       editedOption: "Bearbeiteten Sitzungsvertrag verwenden",
       uploadedOption: (count: number) =>
-        `${count} geladene XML-Verträge verwenden`,
+        `${count} geladene Projektvertrags-XML-Datei${
+          count === 1 ? "" : "en"
+        } verwenden`,
       mixedOption: (count: number, overrides: number) =>
-        `Eingebaute plus ${count} XML-Verträge${
+        `Eingebaute plus ${count} Projektvertrags-XML-Datei${
+          count === 1 ? "" : "en"
+        }${
           overrides > 0
             ? ` (${overrides} Override${overrides === 1 ? "" : "s"})`
             : ""
@@ -149,25 +156,30 @@ export const appCopy = {
       defaultStatus:
         "Standard: eingebaute lokale Strukturverträge werden verwendet.",
       loading: (count: number) =>
-        `${count} XML-Datei${count === 1 ? "" : "en"} wird/werden lokal geladen...`,
+        `${count} Projektvertrags-XML-Datei${
+          count === 1 ? "" : "en"
+        } wird/werden lokal geladen...`,
       loaded: (count: number, warnings: number) =>
-        `${count} XML-Vertrag${count === 1 ? "" : "e"} lokal geladen${
+        `${count} Projektvertrags-XML-Datei${
+          count === 1 ? "" : "en"
+        } lokal geladen${
           warnings > 0
             ? `, ${warnings} Warnung${warnings === 1 ? "" : "en"}`
             : ""
         }.`,
       rejected: (codes: string) =>
-        `XML-Verträge wurden nicht übernommen: ${codes}.`,
+        `Projektvertrags-XML-Dateien wurden nicht übernommen: ${codes}.`,
       builtInSummary: "Eingebaute lokale Verträge",
-      uploadedSummary: (count: number) => `Geladene XML-Verträge (${count})`,
+      uploadedSummary: (count: number) =>
+        `Geladene Projektvertrags-XML-Dateien (${count})`,
       mixedSummary: (count: number) =>
-        `Eingebaute plus geladene XML-Verträge (${count})`,
+        `Eingebaute plus geladene Projektvertrags-XML-Dateien (${count})`,
       editedSummary: "Bearbeiteter Sitzungsvertrag",
       overrideWarningLabel: "Override-Warnung",
       overrideWarning: (count: number) =>
-        `${count} geladene XML-Vertragssignatur${
+        `${count} Signatur${
           count === 1 ? "" : "en"
-        } überschreibt eingebaute lokale Vertragsdaten für diese Sitzung.`,
+        } aus geladenen Projektvertrags-XML-Dateien überschreibt eingebaute lokale Vertragsdaten für diese Sitzung.`,
       editedWarningLabel: "Sitzungsbearbeitung",
       editedWarning:
         "Ein lokal bearbeiteter Sitzungsvertrag ist aktiv. Die eingebauten Standardverträge bleiben unverändert.",
@@ -302,7 +314,7 @@ export const appCopy = {
         privacy:
           "Kein Upload, kein Serverempfang, keine Telemetrie und keine Analytics.",
         contract:
-          "Genutzter lokaler Strukturvertrag: eingebauter Vertrag, geladener XML-Vertrag, bearbeiteter Sitzungsvertrag oder keiner.",
+          "Genutzter lokaler Strukturvertrag: eingebauter Vertrag, geladenes Projektvertrags-XML, bearbeiteter Sitzungsvertrag oder keiner.",
         recognition:
           "Erkannte DATEV-Signatur, Formatname, Kategorie und Version.",
         encodingCsv:
@@ -343,9 +355,9 @@ export const appCopy = {
       contractSource: {
         "built-in": "Eingebauter lokaler Vertrag",
         "edited-session": "Bearbeiteter Sitzungsvertrag",
-        mixed: "Eingebaute plus geladene XML-Verträge",
+        mixed: "Eingebaute plus geladene Projektvertrags-XML-Dateien",
         none: "Kein unterstützter lokaler Vertrag",
-        uploaded: "Geladener XML-Vertrag",
+        uploaded: "Geladenes Projektvertrags-XML",
       },
     },
     diagnostics: {
@@ -382,8 +394,9 @@ export const appCopy = {
     processing: "is processed locally",
     processed: "processed locally in the browser",
     progress: {
-      "read-xml-contracts": "Reading local DATEV XML contracts.",
-      "build-xml-contract-source": "Building local DATEV XML contract source.",
+      "read-xml-contracts": "Reading local project contract XML files.",
+      "build-xml-contract-source":
+        "Building local project contract XML source.",
       "read-file": "Reading file in the browser worker.",
       "decode-text": "Decoding text deterministically.",
       "validate-structure": "Validating local DATEV CSV structure.",
@@ -416,40 +429,42 @@ export const appCopy = {
     },
     contractSource: {
       kicker: "Advanced local contract",
-      copy: "Optional: load DATEV format XML files locally and validate the next CSV/TXT file against that session source. No upload takes place.",
-      upload: "Load XML contract",
+      copy: "Optional: load project contract XML files locally and validate the next CSV/TXT file against that session source. No upload takes place.",
+      upload: "Load project contract XML",
       selectLabel: "Active source",
       builtInOption: "Built-in contracts",
-      uploadedUnavailable: "Loaded XML contracts unavailable",
-      mixedUnavailable: "Built-in plus XML contracts unavailable",
+      uploadedUnavailable: "Loaded project contract XML files unavailable",
+      mixedUnavailable: "Built-in plus project contract XML files unavailable",
       editedUnavailable: "Edited session contract unavailable",
       editedOption: "Use edited session contract",
       uploadedOption: (count: number) =>
-        `Use ${count} loaded XML contract${count === 1 ? "" : "s"}`,
+        `Use ${count} loaded project contract XML file${count === 1 ? "" : "s"}`,
       mixedOption: (count: number, overrides: number) =>
-        `Built-in plus ${count} XML contract${count === 1 ? "" : "s"}${
+        `Built-in plus ${count} project contract XML file${count === 1 ? "" : "s"}${
           overrides > 0
             ? ` (${overrides} override${overrides === 1 ? "" : "s"})`
             : ""
         }`,
       defaultStatus: "Default: built-in local structural contracts are used.",
       loading: (count: number) =>
-        `Loading ${count} XML file${count === 1 ? "" : "s"} locally...`,
+        `Loading ${count} project contract XML file${count === 1 ? "" : "s"} locally...`,
       loaded: (count: number, warnings: number) =>
-        `${count} XML contract${count === 1 ? "" : "s"} loaded locally${
+        `${count} project contract XML file${count === 1 ? "" : "s"} loaded locally${
           warnings > 0
             ? `, ${warnings} warning${warnings === 1 ? "" : "s"}`
             : ""
         }.`,
-      rejected: (codes: string) => `XML contracts were not applied: ${codes}.`,
+      rejected: (codes: string) =>
+        `Project contract XML files were not applied: ${codes}.`,
       builtInSummary: "Built-in local contracts",
-      uploadedSummary: (count: number) => `Loaded XML contracts (${count})`,
+      uploadedSummary: (count: number) =>
+        `Loaded project contract XML files (${count})`,
       mixedSummary: (count: number) =>
-        `Built-in plus loaded XML contracts (${count})`,
+        `Built-in plus loaded project contract XML files (${count})`,
       editedSummary: "Edited session contract",
       overrideWarningLabel: "Override warning",
       overrideWarning: (count: number) =>
-        `${count} loaded XML contract signature${
+        `${count} loaded project contract XML signature${
           count === 1 ? "" : "s"
         } override built-in local contract data for this session.`,
       editedWarningLabel: "Session edit",
@@ -583,7 +598,7 @@ export const appCopy = {
           "File name, file size and processing exclusively in the browser.",
         privacy: "No upload, no server receipt, no telemetry and no analytics.",
         contract:
-          "Applied local structural contract: built-in contract, loaded XML contract, edited session contract, or none.",
+          "Applied local structural contract: built-in contract, loaded project contract XML, edited session contract, or none.",
         recognition:
           "Recognized DATEV signature, format name, category and version.",
         encodingCsv:
@@ -623,9 +638,9 @@ export const appCopy = {
       contractSource: {
         "built-in": "Built-in local contract",
         "edited-session": "Edited session contract",
-        mixed: "Built-in plus loaded XML contracts",
+        mixed: "Built-in plus loaded project contract XML files",
         none: "No supported local contract",
-        uploaded: "Loaded XML contract",
+        uploaded: "Loaded project contract XML",
       },
     },
     diagnostics: {

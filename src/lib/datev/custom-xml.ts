@@ -32,7 +32,7 @@ export interface DatevXmlContractImportResult {
 
 export const importDatevXmlContractSet = (
   xmlFiles: readonly string[],
-  label = "Uploaded DATEV XML contracts"
+  label = "Uploaded project contract XML"
 ): DatevXmlContractImportResult => {
   const diagnostics: DatevDiagnostic[] = [];
   const recognitions: DatevRecognitionContract[] = [];
@@ -46,7 +46,7 @@ export const importDatevXmlContractSet = (
         diagnostic(
           "error",
           "XML_CONTRACT_SET_EMPTY",
-          "At least one local DATEV XML contract file is required."
+          "At least one local project contract XML file is required."
         ),
       ],
     };
@@ -73,7 +73,7 @@ export const importDatevXmlContractSet = (
           diagnostic(
             "error",
             "XML_CONTRACT_DUPLICATE_SIGNATURE",
-            "A local DATEV XML contract set must not contain duplicate format signatures."
+            "A local project contract XML set must not contain duplicate format signatures."
           )
         );
         continue;
@@ -95,7 +95,7 @@ export const importDatevXmlContractSet = (
         diagnostic(
           "error",
           "XML_CONTRACT_NONE_SUPPORTED",
-          "No supported DATEV XML contracts were found."
+          "No supported project contract XML files were found."
         ),
       ],
     };
@@ -145,7 +145,7 @@ const parseSupportedXml = (
         diagnostic(
           "error",
           "XML_CONTRACT_SECURITY_UNSUPPORTED",
-          "Local DATEV XML contracts must not contain declarations, entities, or external references."
+          "Local project contract XML files must not contain declarations, entities, or external references."
         ),
       ],
     };
@@ -157,7 +157,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_MALFORMED",
-        "The local DATEV XML contract could not be parsed."
+        "The local project contract XML could not be parsed."
       )
     );
     if (parsed.unsupportedNode) {
@@ -165,7 +165,7 @@ const parseSupportedXml = (
         diagnostic(
           "error",
           "XML_CONTRACT_NODE_UNSUPPORTED",
-          "The local DATEV XML contract contains unsupported XML node syntax."
+          "The local project contract XML contains unsupported XML node syntax."
         )
       );
     }
@@ -181,7 +181,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_ROOT_UNSUPPORTED",
-        "The local DATEV XML contract root element is not supported."
+        "The local project contract XML root element is not supported."
       )
     );
   }
@@ -190,7 +190,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_VERSION_UNSUPPORTED",
-        "The local DATEV XML contract version is not supported."
+        "The local project contract XML version is not supported."
       )
     );
   }
@@ -199,7 +199,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_MALFORMED",
-        "The local DATEV XML contract contains content outside the root element."
+        "The local project contract XML contains content outside the root element."
       )
     );
   }
@@ -208,7 +208,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_NODE_UNSUPPORTED",
-        "The local DATEV XML contract contains unsupported XML node syntax."
+        "The local project contract XML contains unsupported XML node syntax."
       )
     );
   }
@@ -217,7 +217,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_MISSING_CONTRACT",
-        "The local DATEV XML contract file does not contain a supported contract element."
+        "The local project contract XML file does not contain a supported contract element."
       )
     );
   }
@@ -231,7 +231,7 @@ const parseSupportedXml = (
       diagnostic(
         "error",
         "XML_CONTRACT_NODE_UNSUPPORTED",
-        "The local DATEV XML contract contains unsupported elements."
+        "The local project contract XML contains unsupported elements."
       )
     );
   }
@@ -285,7 +285,7 @@ const convertContract = (
       diagnostic(
         "error",
         "XML_CONTRACT_MARKERS_UNSUPPORTED",
-        "The local DATEV XML contract must declare at least one supported marker."
+        "The local project contract XML must declare at least one supported marker."
       )
     );
   }
@@ -296,7 +296,7 @@ const convertContract = (
       diagnostic(
         "error",
         "XML_CONTRACT_FIELDS_MISSING",
-        "The local DATEV XML contract must contain a field inventory."
+        "The local project contract XML must contain a field inventory."
       )
     );
   }
@@ -357,7 +357,7 @@ const convertField = (
   const fieldNumber = parsePositiveInteger(
     field.attributes.number,
     "XML_CONTRACT_FIELD_NUMBER",
-    "A local DATEV XML field number must be a positive integer.",
+    "A local project contract XML field number must be a positive integer.",
     diagnostics
   );
   if (fieldNumber !== undefined && fieldNumber !== expectedFieldNumber) {
@@ -365,7 +365,7 @@ const convertField = (
       diagnostic(
         "error",
         "XML_CONTRACT_FIELD_ORDER",
-        "Local DATEV XML fields must be ordered without gaps.",
+        "Local project contract XML fields must be ordered without gaps.",
         { fieldIndex: expectedFieldNumber }
       )
     );
@@ -375,13 +375,13 @@ const convertField = (
   const maxLength = parseNonNegativeInteger(
     field.attributes.maxLength,
     "XML_CONTRACT_FIELD_MAX_LENGTH",
-    "A local DATEV XML field maxLength must be a non-negative integer.",
+    "A local project contract XML field maxLength must be a non-negative integer.",
     diagnostics
   );
   const decimalPlaces = parseNonNegativeInteger(
     field.attributes.decimalPlaces,
     "XML_CONTRACT_FIELD_DECIMAL_PLACES",
-    "A local DATEV XML field decimalPlaces must be a non-negative integer.",
+    "A local project contract XML field decimalPlaces must be a non-negative integer.",
     diagnostics
   );
   const necessary = parseBoolean(field.attributes.necessary, diagnostics);
@@ -395,7 +395,7 @@ const convertField = (
       diagnostic(
         "error",
         "XML_CONTRACT_RULE_CLASS_UNSUPPORTED",
-        "The local DATEV XML contract contains an unsupported rule class.",
+        "The local project contract XML contains an unsupported rule class.",
         { fieldIndex: fieldNumber }
       )
     );
@@ -456,7 +456,7 @@ const requireAttribute = (
       diagnostic(
         "error",
         "XML_CONTRACT_ATTRIBUTE_MISSING",
-        "A required local DATEV XML contract attribute is missing.",
+        "A required local project contract XML attribute is missing.",
         { fieldName: attributeName }
       )
     );
@@ -474,7 +474,7 @@ const requireRecognitionCode = (
       diagnostic(
         "error",
         "XML_CONTRACT_ATTRIBUTE_MISSING",
-        "A required local DATEV XML contract attribute is missing.",
+        "A required local project contract XML attribute is missing.",
         { fieldName: "recognitionCode" }
       )
     );
@@ -492,7 +492,7 @@ const requireFieldType = (
       diagnostic(
         "error",
         "XML_CONTRACT_FIELD_TYPE_UNSUPPORTED",
-        "The local DATEV XML contract contains an unsupported field type."
+        "The local project contract XML contains an unsupported field type."
       )
     );
     return undefined;
@@ -509,7 +509,7 @@ const requireFormatExpression = (
       diagnostic(
         "error",
         "XML_CONTRACT_EXPRESSION_UNSUPPORTED",
-        "The local DATEV XML contract contains an unsupported format expression."
+        "The local project contract XML contains an unsupported format expression."
       )
     );
     return undefined;
@@ -527,7 +527,7 @@ const parseBoolean = (
     diagnostic(
       "error",
       "XML_CONTRACT_FIELD_REQUIRED_FLAG",
-      "A local DATEV XML field necessary flag must be true or false."
+      "A local project contract XML field necessary flag must be true or false."
     )
   );
   return undefined;
