@@ -168,7 +168,7 @@ describe("buildValidationReport", () => {
       diagnostics: [
         {
           code: "XML_CONTRACT_FILE_TOO_LARGE",
-          message: "A local DATEV XML contract file exceeds the limit.",
+          message: "A local project contract XML file exceeds the limit.",
           severity: "error",
         },
       ],
@@ -181,7 +181,7 @@ describe("buildValidationReport", () => {
     const report = buildValidationReport(result, "2026-07-03T12:00:00.000Z", {
       contractCount: 1,
       kind: "uploaded",
-      label: "Uploaded DATEV XML contracts",
+      label: "Uploaded project contract XML",
       overrideCount: 0,
       warningCount: 0,
     });

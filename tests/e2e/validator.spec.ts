@@ -209,6 +209,12 @@ test("loads German and English validator routes with language switch", async ({
       "Maximale Größe: 10 MiB. UTF-8 mit oder ohne BOM oder Windows-1252."
     )
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Optional: Projektvertrags-XML-Dateien lokal laden und die nächste CSV/TXT-Datei gegen diese Sitzungsquelle prüfen. Es findet kein Upload statt."
+    )
+  ).toBeVisible();
+  await expect(page.getByText(/DATEV-Format-XML/i)).toHaveCount(0);
 
   await page
     .getByRole("link", { name: "Sprache auf Englisch wechseln" })
@@ -223,6 +229,12 @@ test("loads German and English validator routes with language switch", async ({
       "Maximum size: 10 MiB. UTF-8 with or without BOM or Windows-1252."
     )
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Optional: load project contract XML files locally and validate the next CSV/TXT file against that session source. No upload takes place."
+    )
+  ).toBeVisible();
+  await expect(page.getByText(/DATEV format XML/i)).toHaveCount(0);
 });
 
 test("formats German report section summary with singular labels", async ({
@@ -622,10 +634,10 @@ test("clears stale validation exports while XML contracts are loading", async ({
   await expect(jsonButton).toBeDisabled();
   await expect(htmlButton).toBeDisabled();
   await expect(page.locator("#statusLine")).toHaveText(
-    "Reading local DATEV XML contracts."
+    "Reading local project contract XML files."
   );
   await expect(page.locator("#xmlContractStatus")).toContainText(
-    "Loading 1 XML file locally"
+    "Loading 1 project contract XML file locally"
   );
 });
 
@@ -666,7 +678,7 @@ test("clears stale validation exports while contract source revalidation is pend
               ? {
                   contractCount: 1,
                   kind: "mixed",
-                  label: "Built-in plus XML contracts",
+                  label: "Built-in plus uploaded project contract XML",
                   overrideCount: 0,
                   warningCount: 0,
                 }
@@ -722,14 +734,14 @@ test("clears stale validation exports while contract source revalidation is pend
               mixedSummary: {
                 contractCount: 1,
                 kind: "mixed",
-                label: "Built-in plus XML contracts",
+                label: "Built-in plus uploaded project contract XML",
                 overrideCount: 0,
                 warningCount: 0,
               },
               summary: {
                 contractCount: 1,
                 kind: "uploaded",
-                label: "Loaded XML contracts",
+                label: "Uploaded project contract XML",
                 overrideCount: 0,
                 warningCount: 0,
               },
@@ -779,7 +791,7 @@ test("clears stale validation exports while contract source revalidation is pend
 
   await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Built-in plus loaded XML contracts"
+    "Built-in plus loaded project contract XML files"
   );
   await expect(copyButton).toBeEnabled();
   await expect(jsonButton).toBeEnabled();
@@ -1198,7 +1210,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   });
 
   await expect(page.locator("#xmlContractStatus")).toContainText(
-    "1 XML contract loaded locally"
+    "1 project contract XML file loaded locally"
   );
   await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
 
@@ -1227,7 +1239,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
     "synthetic-format-v1"
   );
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Built-in plus loaded XML contracts"
+    "Built-in plus loaded project contract XML files"
   );
   await expect(
     page
@@ -1275,7 +1287,9 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   expect(htmlPath).toBeTruthy();
   const htmlReport = await readFile(htmlPath ?? "", "utf8");
   expectHtmlReportToBeLocalOnly(htmlReport);
-  expect(htmlReport).toContain("Built-in plus loaded XML contracts");
+  expect(htmlReport).toContain(
+    "Built-in plus loaded project contract XML files"
+  );
   expect(htmlReport).toContain("<dt>Contract count</dt><dd>13</dd>");
   expect(htmlReport).toContain("<dt>Overrides</dt><dd>0</dd>");
   expect(htmlReport).toContain("<dt>Contract warnings</dt><dd>0</dd>");
@@ -1302,7 +1316,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
     "datev-gl-account-description-v3"
   );
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Built-in plus loaded XML contracts"
+    "Built-in plus loaded project contract XML files"
   );
   await expect(page.locator("#contractSourceWarning")).toBeHidden();
 
@@ -1326,7 +1340,7 @@ test("loads synthetic XML contracts locally and validates with mixed source fall
   }, validCustomContractCsv());
 
   await expect(page.locator("#metaContractSource")).toContainText(
-    "Loaded XML contracts (1)"
+    "Loaded project contract XML files (1)"
   );
 
   await page.locator("#contractSourceSelect").selectOption("built-in");

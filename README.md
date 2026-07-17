@@ -36,15 +36,15 @@ locally implemented DATEV CSV structural contract:
   explicit user action.
 - An optional local data preview for the first parsed rows after explicit user
   approval. Preview values are not exported.
-- An advanced local DATEV format XML mode that lets users load session-local
-  XML contract files in the browser worker and explicitly validate CSV/TXT
-  files against built-in, uploaded-only, mixed built-in plus uploaded, or
-  edited session-local contract sources. Mixed mode uses uploaded matching
-  signatures first and shows an override warning when uploaded XML contracts
-  replace built-in structural facts for the current session. Edited
+- An advanced local project contract XML mode that lets users load
+  session-local project contract XML files in the browser worker and explicitly
+  validate CSV/TXT files against built-in, uploaded-only, mixed built-in plus
+  uploaded, or edited session-local contract sources. Mixed mode uses uploaded
+  matching signatures first and shows an override warning when uploaded project
+  contract XML files replace built-in structural facts for the current session. Edited
   session-local contracts are cloned from the active local source, never mutate
-  built-in defaults, and are discarded with the browser session. XML contract
-  uploads must use `.xml` file names. Parsing accepts a single safe leading XML
+  built-in defaults, and are discarded with the browser session. Project
+  contract XML uploads must use `.xml` file names. Parsing accepts a single safe leading XML
   declaration and rejects DOCTYPE declarations, entities, external references,
   and arbitrary processing instructions before interpretation.
 
@@ -125,11 +125,11 @@ processing of DATEV files.
 - Reports may include a SHA-256 content fingerprint after the browser worker
   reads a file. The hash is not a raw data value, but it can identify the exact
   file if the report is shared.
-- Uploaded DATEV format XML files are parsed locally in the browser worker,
+- Uploaded project contract XML files are parsed locally in the browser worker,
   kept only for the current session, and never uploaded or stored by the site.
-- XML contract files are interpreted only as a constrained local structural
-  contract subset; raw XML is not rendered, exported, or persisted. Files
-  without a `.xml` name are rejected before parsing.
+- Project contract XML files are interpreted only as a constrained local
+  structural contract subset; raw XML is not rendered, exported, or persisted.
+  Files without a `.xml` name are rejected before parsing.
 - Primary CSV/TXT validation files without `.csv` or `.txt` names are rejected
   before parsing.
 - Edited session-local contract copies are derived and applied only in browser

@@ -52,6 +52,13 @@ const officialAcceptanceClaimPatterns = [
   /\bguaranteed DATEV acceptance\b/i,
 ];
 
+const unsupportedXmlCompatibilityClaimPatterns = [
+  /\bDATEV format XML\b/i,
+  /\bDATEV XML contract\b/i,
+  /\bDATEV-Format-XML\b/i,
+  /\bDATEV-XML-Vertr(?:ag|äge)\b/i,
+];
+
 export const assertPublicCopy = (text, sourceLabel) => {
   if (/\bLite\b|datev-lite/i.test(text)) {
     throw new Error(`${sourceLabel} still contains legacy Lite naming.`);
@@ -64,6 +71,15 @@ export const assertPublicCopy = (text, sourceLabel) => {
   }
   if (officialAcceptanceClaimPatterns.some((pattern) => pattern.test(text))) {
     throw new Error(`${sourceLabel} contains an official acceptance claim.`);
+  }
+  if (
+    unsupportedXmlCompatibilityClaimPatterns.some((pattern) =>
+      pattern.test(text)
+    )
+  ) {
+    throw new Error(
+      `${sourceLabel} contains an unsupported DATEV format-XML compatibility claim.`
+    );
   }
 };
 

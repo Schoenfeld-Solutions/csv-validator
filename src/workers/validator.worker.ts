@@ -104,7 +104,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
         diagnostic(
           "error",
           "XML_CONTRACT_SET_EMPTY",
-          "At least one local DATEV XML contract file is required."
+          "At least one local project contract XML file is required."
         ),
       ],
       type: "contracts",
@@ -120,7 +120,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
         diagnostic(
           "error",
           "XML_CONTRACT_FILE_LIMIT",
-          "The selected local DATEV XML contract set contains too many files."
+          "The selected local project contract XML set contains too many files."
         ),
       ],
       type: "contracts",
@@ -136,7 +136,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
         diagnostic(
           "error",
           "XML_CONTRACT_FILE_TYPE_UNSUPPORTED",
-          "Local DATEV XML contract uploads must use .xml files.",
+          "Local project contract XML uploads must use .xml files.",
           { fieldName: safeFileName(file.name) }
         )
       );
@@ -147,7 +147,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
         diagnostic(
           "error",
           "XML_CONTRACT_FILE_TOO_LARGE",
-          "A local DATEV XML contract file exceeds the documented 2 MiB limit.",
+          "A local project contract XML file exceeds the documented 2 MiB limit.",
           { fieldName: safeFileName(file.name) }
         )
       );
@@ -158,7 +158,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
       diagnostic(
         "error",
         "XML_CONTRACT_SET_TOO_LARGE",
-        "The local DATEV XML contract set exceeds the documented 10 MiB limit."
+        "The local project contract XML set exceeds the documented 10 MiB limit."
       )
     );
   }
@@ -192,7 +192,7 @@ const loadContractFiles = async (files: readonly File[]): Promise<void> => {
         diagnostic(
           "error",
           "XML_CONTRACT_READ_FAILED",
-          "A local DATEV XML contract file could not be read in the browser worker.",
+          "A local project contract XML file could not be read in the browser worker.",
           { fieldName: safeFileName(file.name) }
         )
       );
@@ -284,7 +284,7 @@ const validateFile = async (
         diagnostic(
           "error",
           "CONTRACT_SOURCE_MISSING",
-          "The selected local DATEV XML contract source is not available."
+          "The selected local project contract XML source is not available."
         ),
       ]),
       type: "result",

@@ -132,7 +132,7 @@ export const createMixedContractRepository = (
     summary: {
       contractCount: mixedRecognitions.length,
       kind: "mixed",
-      label: "Built-in plus uploaded DATEV XML contracts",
+      label: "Built-in plus uploaded project contract XML",
       overrideCount,
       warningCount:
         uploadedRepository.summary.warningCount + (overrideCount > 0 ? 1 : 0),
