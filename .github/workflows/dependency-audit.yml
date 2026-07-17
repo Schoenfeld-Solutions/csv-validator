@@ -7,6 +7,9 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  ASTRO_TELEMETRY_DISABLED: "1"
+
 concurrency:
   group: dependency-audit-${{ github.ref }}
   cancel-in-progress: true

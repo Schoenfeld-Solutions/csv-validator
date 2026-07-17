@@ -24,25 +24,25 @@
     "npm": "11.9.0"
   },
   "scripts": {
-    "astro": "astro",
+    "astro": "node scripts/run-astro.mjs",
     "audit:ci": "npm audit --audit-level=low",
-    "build": "astro build",
+    "build": "node scripts/run-astro.mjs build",
     "check": "npm run preflight",
     "check:ci": "npm run preflight",
     "check:governance": "node scripts/check-repo-governance.mjs",
     "check:public-copy": "node scripts/check-public-copy.mjs",
     "check:pr-title": "node scripts/check-pr-title.mjs",
-    "dev": "astro dev",
+    "dev": "node scripts/run-astro.mjs dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
     "preflight": "bash bin/checks/preflight.sh",
-    "preview": "astro preview",
+    "preview": "node scripts/run-astro.mjs preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:lighthouse": "node scripts/lighthouse-check.mjs",
-    "typecheck": "astro check && tsc --noEmit"
+    "typecheck": "node scripts/run-astro.mjs check && tsc --noEmit"
   },
   "dependencies": {
     "astro": "^6.4.8"
