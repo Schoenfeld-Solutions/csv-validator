@@ -105,6 +105,176 @@ const dropCsvOnValidator = async (
   );
 };
 
+type ControlledWorkerRequest = {
+  readonly contractSource?: string;
+  readonly fileName?: string;
+  readonly operationId: number;
+  readonly operationKind: string;
+  readonly type: string;
+};
+
+const installControlledWorker = (): void => {
+  type BrowserRequest = {
+    readonly contractSource?: string;
+    readonly file?: File;
+    readonly operationId?: number;
+    readonly operationKind?: string;
+    readonly type?: string;
+  };
+  type ControlledWindow = Window & {
+    __controlledWorkerEmit?: (data: unknown) => void;
+    __controlledWorkerRequests?: BrowserRequest[];
+  };
+
+  const controlledWindow = window as ControlledWindow;
+  const requests: BrowserRequest[] = [];
+  controlledWindow.__controlledWorkerRequests = requests;
+
+  class ControlledWorker {
+    private readonly listeners = new Set<EventListener>();
+
+    constructor() {
+      controlledWindow.__controlledWorkerEmit = (data) => {
+        const event = new MessageEvent("message", { data });
+        for (const listener of this.listeners) listener(event);
+      };
+    }
+
+    addEventListener(type: string, listener: EventListener): void {
+      if (type === "message") this.listeners.add(listener);
+    }
+
+    removeEventListener(type: string, listener: EventListener): void {
+      if (type === "message") this.listeners.delete(listener);
+    }
+
+    postMessage(message: unknown): void {
+      requests.push(message as BrowserRequest);
+    }
+
+    terminate(): void {
+      this.listeners.clear();
+    }
+  }
+
+  Object.defineProperty(window, "Worker", {
+    configurable: true,
+    value: ControlledWorker,
+  });
+};
+
+const getControlledWorkerRequests = async (
+  page: Page
+): Promise<ControlledWorkerRequest[]> =>
+  page.evaluate(() => {
+    const requests = (
+      window as Window & {
+        __controlledWorkerRequests?: readonly {
+          readonly contractSource?: string;
+          readonly file?: File;
+          readonly operationId?: number;
+          readonly operationKind?: string;
+          readonly type?: string;
+        }[];
+      }
+    ).__controlledWorkerRequests;
+    return (requests ?? []).map((request) => ({
+      contractSource: request.contractSource,
+      fileName: request.file?.name,
+      operationId: request.operationId ?? -1,
+      operationKind: request.operationKind ?? "",
+      type: request.type ?? "",
+    }));
+  });
+
+const emitControlledWorkerMessage = async (
+  page: Page,
+  message: unknown
+): Promise<void> => {
+  await page.evaluate((data) => {
+    (
+      window as Window & {
+        __controlledWorkerEmit?: (response: unknown) => void;
+      }
+    ).__controlledWorkerEmit?.(data);
+  }, message);
+};
+
+const controlledValidationResponse = ({
+  contractSourceKind = "built-in",
+  operationId,
+  previewValue,
+  sourceName,
+}: {
+  readonly contractSourceKind?: "built-in" | "mixed";
+  readonly operationId: number;
+  readonly previewValue: string;
+  readonly sourceName: string;
+}): unknown => ({
+  contractSource: {
+    contractCount: contractSourceKind === "mixed" ? 13 : 12,
+    kind: contractSourceKind,
+    label:
+      contractSourceKind === "mixed"
+        ? "Built-in plus loaded project contract XML files"
+        : "Built-in local contracts",
+    overrideCount: 0,
+    warningCount: 0,
+  },
+  operationId,
+  operationKind: "validation",
+  preview: {
+    available: true,
+    captionLine: 2,
+    captions: [
+      { column: 1, line: 2, value: "Konto" },
+      { column: 2, line: 2, value: "Beschriftung" },
+    ],
+    rowLimit: 50,
+    rows: [
+      {
+        cells: [
+          { column: 1, line: 3, value: "1000" },
+          { column: 2, line: 3, value: previewValue },
+        ],
+        fieldCount: 2,
+        line: 3,
+      },
+    ],
+    shownDataRows: 1,
+    totalDataRows: 1,
+    truncated: false,
+  },
+  result: {
+    csv: {
+      dataRecordCount: 1,
+      delimiter: ";",
+      encoding: "utf-8",
+      fieldCount: 2,
+      physicalLineCount: 3,
+      quote: '"',
+    },
+    diagnostics: [],
+    format: {
+      category: "20",
+      dataKind: "master",
+      marker: "EXTF",
+      name: "Kontenbeschriftungen",
+      recognitionCode: "datev-gl-account-description-v3",
+      version: "3",
+    },
+    schemaVersion: 1,
+    source: {
+      name: sourceName,
+      processedInBrowser: true,
+      sizeBytes: 128,
+    },
+    status: "valid",
+    summary: { errorCount: 0, warningCount: 0 },
+  },
+  type: "result",
+});
+
 const expectBuiltInFallbackExportsSafe = async (
   page: Page,
   forbiddenValues: readonly string[]
@@ -277,11 +447,19 @@ test("renders worker progress messages in the active language", async ({
       }
 
       postMessage(message: unknown): void {
-        const request = message as { readonly type?: string };
+        const request = message as {
+          readonly operationId?: number;
+          readonly type?: string;
+        };
         if (request.type !== "validate") return;
         queueMicrotask(() => {
           const event = new MessageEvent("message", {
-            data: { code: "read-file", type: "progress" },
+            data: {
+              code: "read-file",
+              operationId: request.operationId,
+              operationKind: "validation",
+              type: "progress",
+            },
           });
           for (const listener of this.listeners) listener(event);
         });
@@ -389,6 +567,7 @@ test("keeps report export controls disabled until validation completes", async (
   await page.addInitScript(() => {
     class PendingValidationWorker {
       private readonly listeners = new Set<EventListener>();
+      private validationOperationId: number | undefined;
 
       constructor() {
         (
@@ -396,8 +575,11 @@ test("keeps report export controls disabled until validation completes", async (
             __completeValidation?: (sourceName?: string) => void;
           }
         ).__completeValidation = (sourceName = "pending.csv") => {
+          if (this.validationOperationId === undefined) return;
           const event = new MessageEvent("message", {
             data: {
+              operationId: this.validationOperationId,
+              operationKind: "validation",
               result: {
                 csv: {
                   dataRecordCount: 0,
@@ -444,10 +626,19 @@ test("keeps report export controls disabled until validation completes", async (
       }
 
       postMessage(message: unknown): void {
-        const request = message as { readonly type?: string };
+        const request = message as {
+          readonly operationId?: number;
+          readonly type?: string;
+        };
         if (request.type !== "validate") return;
+        this.validationOperationId = request.operationId;
         const event = new MessageEvent("message", {
-          data: { code: "read-file", type: "progress" },
+          data: {
+            code: "read-file",
+            operationId: request.operationId,
+            operationKind: "validation",
+            type: "progress",
+          },
         });
         for (const listener of this.listeners) listener(event);
       }
@@ -543,12 +734,15 @@ test("clears stale validation exports while XML contracts are loading", async ({
       postMessage(message: unknown): void {
         const request = message as {
           readonly file?: File;
+          readonly operationId?: number;
           readonly type?: string;
         };
         if (request.type === "validate") {
           const sourceName = request.file?.name ?? "previous.csv";
           queueMicrotask(() => {
             this.emit({
+              operationId: request.operationId,
+              operationKind: "validation",
               result: {
                 csv: {
                   dataRecordCount: 1,
@@ -586,7 +780,12 @@ test("clears stale validation exports while XML contracts are loading", async ({
         }
         if (request.type === "load-contracts") {
           queueMicrotask(() => {
-            this.emit({ code: "read-xml-contracts", type: "progress" });
+            this.emit({
+              code: "read-xml-contracts",
+              operationId: request.operationId,
+              operationKind: "contract-load",
+              type: "progress",
+            });
           });
         }
       }
@@ -661,6 +860,7 @@ test("clears stale validation exports while contract source revalidation is pend
         const request = message as {
           readonly contractSource?: "built-in" | "mixed" | "uploaded";
           readonly file?: File;
+          readonly operationId?: number;
           readonly type?: string;
         };
         if (request.type === "validate") {
@@ -668,7 +868,12 @@ test("clears stale validation exports while contract source revalidation is pend
           this.validationCount += 1;
           if (currentValidation >= 2) {
             queueMicrotask(() => {
-              this.emit({ code: "read-file", type: "progress" });
+              this.emit({
+                code: "read-file",
+                operationId: request.operationId,
+                operationKind: "validation",
+                type: "progress",
+              });
             });
             return;
           }
@@ -692,6 +897,8 @@ test("clears stale validation exports while contract source revalidation is pend
           queueMicrotask(() => {
             this.emit({
               contractSource,
+              operationId: request.operationId,
+              operationKind: "validation",
               result: {
                 csv: {
                   dataRecordCount: 1,
@@ -745,6 +952,8 @@ test("clears stale validation exports while contract source revalidation is pend
                 overrideCount: 0,
                 warningCount: 0,
               },
+              operationId: request.operationId,
+              operationKind: "contract-load",
               type: "contracts",
             });
           });
@@ -806,6 +1015,297 @@ test("clears stale validation exports while contract source revalidation is pend
   await expect(page.locator("#statusLine")).toHaveText(
     "Reading file in the browser worker."
   );
+});
+
+test("keeps only the latest file result, preview, progress, and exports", async ({
+  page,
+}) => {
+  await page.addInitScript(installControlledWorker);
+  await page.goto("/csv-validator/en/");
+
+  await dropCsvOnValidator(
+    page,
+    validGlAccountDescriptionCsv(),
+    "first-race.csv"
+  );
+  await dropCsvOnValidator(
+    page,
+    validGlAccountDescriptionCsv(),
+    "second-race.csv"
+  );
+
+  await expect
+    .poll(async () => {
+      const requests = await getControlledWorkerRequests(page);
+      return requests.filter((request) => request.type === "validate").length;
+    })
+    .toBe(2);
+  const validationRequests = (await getControlledWorkerRequests(page)).filter(
+    (request) => request.type === "validate"
+  );
+  const firstRequest = validationRequests[0];
+  const secondRequest = validationRequests[1];
+  expect(firstRequest).toMatchObject({
+    fileName: "first-race.csv",
+    operationKind: "validation",
+  });
+  expect(secondRequest).toMatchObject({
+    fileName: "second-race.csv",
+    operationKind: "validation",
+  });
+
+  await emitControlledWorkerMessage(
+    page,
+    controlledValidationResponse({
+      operationId: secondRequest?.operationId ?? -1,
+      previewValue: "latest-preview-value",
+      sourceName: "second-race.csv",
+    })
+  );
+
+  await expect(page.locator("#resultPanel")).toBeVisible();
+  await expect(page.locator("#statusLine")).toContainText(
+    "second-race.csv processed locally in the browser"
+  );
+  await page.getByRole("tab", { name: "Data" }).click();
+  await page.getByRole("button", { name: "Show data preview" }).click();
+  await expect(
+    page.getByRole("cell", { name: "latest-preview-value" })
+  ).toBeVisible();
+
+  await emitControlledWorkerMessage(
+    page,
+    controlledValidationResponse({
+      operationId: firstRequest?.operationId ?? -1,
+      previewValue: "stale-preview-value",
+      sourceName: "first-race.csv",
+    })
+  );
+  await emitControlledWorkerMessage(page, {
+    code: "decode-text",
+    operationId: firstRequest?.operationId ?? -1,
+    operationKind: "validation",
+    type: "progress",
+  });
+  await emitControlledWorkerMessage(page, {
+    code: "validate-structure",
+    operationId: secondRequest?.operationId ?? -1,
+    operationKind: "validation",
+    type: "progress",
+  });
+
+  await expect(page.locator("#statusLine")).toContainText(
+    "second-race.csv processed locally in the browser"
+  );
+  await expect(page.locator("#dataPreviewContent")).not.toContainText(
+    "stale-preview-value"
+  );
+  await expect(page.locator("#copyJsonButton")).toBeEnabled();
+  await expect(page.locator("#downloadJsonButton")).toBeEnabled();
+  await expect(page.locator("#downloadHtmlReportButton")).toBeEnabled();
+
+  await page.evaluate(() => {
+    const controlledWindow = window as Window & { __copiedJson?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          controlledWindow.__copiedJson = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("tab", { name: "Analysis" }).click();
+  await page.getByRole("button", { name: "Copy JSON result" }).click();
+  const copiedJson = await page.evaluate(
+    () => (window as Window & { __copiedJson?: string }).__copiedJson ?? ""
+  );
+  expect(JSON.parse(copiedJson).source.name).toBe("second-race.csv");
+  expect(copiedJson).not.toContain("latest-preview-value");
+  expect(copiedJson).not.toContain("stale-preview-value");
+});
+
+test("keeps only the latest project contract XML load", async ({ page }) => {
+  await page.addInitScript(installControlledWorker);
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "first-contract.xml",
+  });
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "second-contract.xml",
+  });
+
+  await expect
+    .poll(async () => {
+      const requests = await getControlledWorkerRequests(page);
+      return requests.filter((request) => request.type === "load-contracts")
+        .length;
+    })
+    .toBe(2);
+  const contractRequests = (await getControlledWorkerRequests(page)).filter(
+    (request) => request.type === "load-contracts"
+  );
+  const firstRequest = contractRequests[0];
+  const secondRequest = contractRequests[1];
+
+  await emitControlledWorkerMessage(page, {
+    diagnostics: [],
+    mixedSummary: {
+      contractCount: 14,
+      kind: "mixed",
+      label: "Latest mixed contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    },
+    operationId: secondRequest?.operationId ?? -1,
+    operationKind: "contract-load",
+    summary: {
+      contractCount: 2,
+      kind: "uploaded",
+      label: "Latest uploaded contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    },
+    type: "contracts",
+  });
+  await expect(page.locator("#xmlContractStatus")).toHaveText(
+    "2 project contract XML files loaded locally."
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+  await expect(
+    page.locator('#contractSourceSelect option[value="uploaded"]')
+  ).toHaveText("Use 2 loaded project contract XML files");
+
+  await emitControlledWorkerMessage(page, {
+    diagnostics: [],
+    mixedSummary: {
+      contractCount: 13,
+      kind: "mixed",
+      label: "Stale mixed contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    },
+    operationId: firstRequest?.operationId ?? -1,
+    operationKind: "contract-load",
+    summary: {
+      contractCount: 1,
+      kind: "uploaded",
+      label: "Stale uploaded contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    },
+    type: "contracts",
+  });
+  await emitControlledWorkerMessage(page, {
+    code: "read-xml-contracts",
+    operationId: firstRequest?.operationId ?? -1,
+    operationKind: "contract-load",
+    type: "progress",
+  });
+
+  await expect(page.locator("#xmlContractStatus")).toHaveText(
+    "2 project contract XML files loaded locally."
+  );
+  await expect(page.locator("#contractSourceSelect")).toHaveValue("mixed");
+  await expect(
+    page.locator('#contractSourceSelect option[value="uploaded"]')
+  ).toHaveText("Use 2 loaded project contract XML files");
+});
+
+test("ignores a validation result superseded by a contract source switch", async ({
+  page,
+}) => {
+  await page.addInitScript(installControlledWorker);
+  await page.goto("/csv-validator/en/");
+
+  await page.locator("#xmlContractInput").setInputFiles({
+    buffer: Buffer.from(validCustomContractXml(), "utf8"),
+    mimeType: "application/xml",
+    name: "source-switch.xml",
+  });
+  await expect
+    .poll(async () => (await getControlledWorkerRequests(page)).length)
+    .toBe(1);
+  const contractRequest = (await getControlledWorkerRequests(page))[0];
+  await emitControlledWorkerMessage(page, {
+    diagnostics: [],
+    mixedSummary: {
+      contractCount: 13,
+      kind: "mixed",
+      label: "Mixed contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    },
+    operationId: contractRequest?.operationId ?? -1,
+    operationKind: "contract-load",
+    summary: {
+      contractCount: 1,
+      kind: "uploaded",
+      label: "Uploaded contracts",
+      overrideCount: 0,
+      warningCount: 0,
+    },
+    type: "contracts",
+  });
+
+  await dropCsvOnValidator(
+    page,
+    validGlAccountDescriptionCsv(),
+    "source-race.csv"
+  );
+  await expect
+    .poll(async () => {
+      const requests = await getControlledWorkerRequests(page);
+      return requests.filter((request) => request.type === "validate").length;
+    })
+    .toBe(1);
+  await page.locator("#contractSourceSelect").selectOption("built-in");
+  await expect
+    .poll(async () => {
+      const requests = await getControlledWorkerRequests(page);
+      return requests.filter((request) => request.type === "validate").length;
+    })
+    .toBe(2);
+
+  const validationRequests = (await getControlledWorkerRequests(page)).filter(
+    (request) => request.type === "validate"
+  );
+  const mixedRequest = validationRequests[0];
+  const builtInRequest = validationRequests[1];
+  expect(mixedRequest?.contractSource).toBe("mixed");
+  expect(builtInRequest?.contractSource).toBe("built-in");
+
+  await emitControlledWorkerMessage(
+    page,
+    controlledValidationResponse({
+      contractSourceKind: "mixed",
+      operationId: mixedRequest?.operationId ?? -1,
+      previewValue: "stale-source-value",
+      sourceName: "source-race.csv",
+    })
+  );
+  await expect(page.locator("#resultPanel")).toBeHidden();
+  await expect(page.locator("#copyJsonButton")).toBeDisabled();
+
+  await emitControlledWorkerMessage(
+    page,
+    controlledValidationResponse({
+      operationId: builtInRequest?.operationId ?? -1,
+      previewValue: "current-source-value",
+      sourceName: "source-race.csv",
+    })
+  );
+  await expect(page.locator("#resultPanel")).toBeVisible();
+  await expect(page.locator("#metaContractSource")).toContainText(
+    "Built-in local contracts"
+  );
+  await expect(page.locator("body")).not.toContainText("stale-source-value");
+  await expect(page.locator("#copyJsonButton")).toBeEnabled();
 });
 
 test("validates a local CSV selected with the file picker", async ({
@@ -1563,12 +2063,15 @@ test("guards session edit exports while save or discard is pending", async ({
             readonly fields?: readonly { readonly maxLength?: number }[];
           };
           readonly file?: File;
+          readonly operationId?: number;
           readonly type?: string;
         };
         if (request.type === "validate") {
           const sourceName = request.file?.name ?? "editable-pending.csv";
           queueMicrotask(() => {
             this.emit({
+              operationId: request.operationId,
+              operationKind: "validation",
               result: {
                 csv: {
                   dataRecordCount: 1,
@@ -1639,6 +2142,8 @@ test("guards session edit exports while save or discard is pending", async ({
                   requiredCaptions: ["Konto", "Beschriftung"],
                 },
               },
+              operationId: request.operationId,
+              operationKind: "contract-edit",
               type: "editable-contract",
             });
           });
@@ -1658,6 +2163,8 @@ test("guards session edit exports while save or discard is pending", async ({
                     severity: "error",
                   },
                 ],
+                operationId: request.operationId,
+                operationKind: "contract-edit",
                 type: "editable-contract",
               });
             });

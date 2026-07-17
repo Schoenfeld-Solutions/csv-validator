@@ -178,44 +178,54 @@ export interface DatevDataPreview {
 export type DatevActiveContractSourceKind =
   "built-in" | "uploaded" | "mixed" | "edited-session";
 
+export type WorkerOperationKind =
+  "validation" | "contract-load" | "contract-edit";
+
+export interface WorkerOperationReference<
+  OperationKind extends WorkerOperationKind = WorkerOperationKind,
+> {
+  readonly operationId: number;
+  readonly operationKind: OperationKind;
+}
+
 export type WorkerValidationRequest =
-  | {
+  | (WorkerOperationReference<"validation"> & {
       readonly type: "validate";
       readonly file: File;
       readonly contractSource?: DatevActiveContractSourceKind;
-    }
-  | {
+    })
+  | (WorkerOperationReference<"contract-load"> & {
       readonly type: "load-contracts";
       readonly files: readonly File[];
-    }
-  | {
+    })
+  | (WorkerOperationReference<"contract-edit"> & {
       readonly type: "create-editable-contract";
       readonly recognitionCode: string;
       readonly contractSource?: DatevActiveContractSourceKind;
-    }
-  | {
+    })
+  | (WorkerOperationReference<"contract-edit"> & {
       readonly type: "save-editable-contract";
       readonly draft: DatevEditableContractDraft;
-    }
-  | {
+    })
+  | (WorkerOperationReference<"contract-edit"> & {
       readonly type: "discard-editable-contract";
-    };
+    });
 
-export interface WorkerContractLoadResponse {
+export interface WorkerContractLoadResponse extends WorkerOperationReference<"contract-load"> {
   readonly type: "contracts";
   readonly summary?: DatevContractSourceSummary;
   readonly mixedSummary?: DatevContractSourceSummary;
   readonly diagnostics: readonly DatevDiagnostic[];
 }
 
-export interface WorkerResultResponse {
+export interface WorkerResultResponse extends WorkerOperationReference<"validation"> {
   readonly type: "result";
   readonly result: DatevValidationResult;
   readonly preview?: DatevDataPreview;
   readonly contractSource?: DatevContractSourceSummary;
 }
 
-export interface WorkerEditableContractResponse {
+export interface WorkerEditableContractResponse extends WorkerOperationReference<"contract-edit"> {
   readonly type: "editable-contract";
   readonly draft?: DatevEditableContractDraft;
   readonly summary?: DatevContractSourceSummary;
@@ -229,11 +239,18 @@ export type WorkerProgressCode =
   | "decode-text"
   | "validate-structure";
 
-export type WorkerValidationResponse =
-  | {
+export type WorkerProgressResponse =
+  | (WorkerOperationReference<"contract-load"> & {
       readonly type: "progress";
-      readonly code: WorkerProgressCode;
-    }
+      readonly code: "read-xml-contracts" | "build-xml-contract-source";
+    })
+  | (WorkerOperationReference<"validation"> & {
+      readonly type: "progress";
+      readonly code: "read-file" | "decode-text" | "validate-structure";
+    });
+
+export type WorkerValidationResponse =
+  | WorkerProgressResponse
   | WorkerContractLoadResponse
   | WorkerEditableContractResponse
   | WorkerResultResponse;

@@ -17,6 +17,7 @@ import {
   type ValidationReportDiagnostic,
 } from "../lib/datev/report";
 import { appCopy, type Locale } from "../lib/i18n";
+import { createWorkerOperationCoordinator } from "../lib/datev/operation-correlation";
 
 const getElement = <T extends HTMLElement>(id: string, typeName: string): T => {
   const element = document.getElementById(id);
@@ -166,6 +167,7 @@ const worker = new Worker(
     type: "module",
   }
 );
+const workerOperations = createWorkerOperationCoordinator();
 
 const editableFieldTypes: readonly DatevFormatType[] = [
   "Text",
@@ -328,6 +330,7 @@ const validateFile = (file: File): void => {
       ? `${displayName} (${formatBytes(file.size)}) ${copy.processing}...`
       : `${displayName} (${formatBytes(file.size)}) ${copy.processing}...`;
   const request: WorkerValidationRequest = {
+    ...workerOperations.begin("validation"),
     contractSource: activeContractSource,
     file,
     type: "validate",
@@ -343,12 +346,14 @@ fileInput.addEventListener("change", () => {
 xmlContractInput.addEventListener("change", () => {
   const files = Array.from(xmlContractInput.files ?? []);
   if (files.length === 0) return;
+  workerOperations.invalidate("validation");
   xmlContractStatus.textContent = copy.contractSource.loading(files.length);
   if (latestFile) {
     resetPendingValidationOutput();
     statusLine.textContent = copy.progress["read-xml-contracts"];
   }
   const request: WorkerValidationRequest = {
+    ...workerOperations.begin("contract-load"),
     files,
     type: "load-contracts",
   };
@@ -377,6 +382,7 @@ createEditableContractButton.addEventListener("click", () => {
   if (!recognitionCode) return;
   contractEditorStatus.textContent = copy.contractEditor.loading;
   const request: WorkerValidationRequest = {
+    ...workerOperations.begin("contract-edit"),
     contractSource: activeContractSource,
     recognitionCode,
     type: "create-editable-contract",
@@ -393,6 +399,7 @@ applyEditableContractButton.addEventListener("click", () => {
     copyStatus.textContent = "";
   }
   const request: WorkerValidationRequest = {
+    ...workerOperations.begin("contract-edit"),
     draft,
     type: "save-editable-contract",
   };
@@ -402,9 +409,11 @@ applyEditableContractButton.addEventListener("click", () => {
 discardEditableContractButton.addEventListener("click", () => {
   contractEditorStatus.textContent = copy.contractEditor.discarding;
   if (latestFile) {
+    workerOperations.invalidate("validation");
     resetPendingValidationOutput();
   }
   const request: WorkerValidationRequest = {
+    ...workerOperations.begin("contract-edit"),
     type: "discard-editable-contract",
   };
   worker.postMessage(request);
@@ -433,10 +442,12 @@ worker.addEventListener(
   "message",
   (event: MessageEvent<WorkerValidationResponse>) => {
     const message = event.data;
+    if (!workerOperations.isCurrent(message)) return;
     if (message.type === "progress") {
       statusLine.textContent = copy.progress[message.code];
       return;
     }
+    if (!workerOperations.complete(message)) return;
     if (message.type === "contracts") {
       if (message.summary) {
         uploadedContractSource = message.summary;
