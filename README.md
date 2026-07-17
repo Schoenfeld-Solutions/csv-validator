@@ -82,8 +82,9 @@ guarantees that official DATEV tools will make the same decision.
 
 Requirements:
 
-- Node.js `25.6.1` or compatible with `>=25`
-- npm
+- Node.js `26.5.0` or another compatible Node 26 release matching
+  `>=26.0.0 <27`
+- npm `11.9.0` or compatible with `>=11`
 
 Local commands:
 
