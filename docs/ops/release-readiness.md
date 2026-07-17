@@ -25,6 +25,11 @@ runtime, development, or unknown dependency scope.
 The PR title must follow Conventional Commits. The expected merge is a squash
 merge with a valid Conventional Commit subject.
 
+CodeQL default setup runs as an additional advisory security signal for GitHub
+Actions and JavaScript/TypeScript. A CodeQL analysis failure or open alert must
+be investigated before merge even while CodeQL is not a ruleset-required check.
+Making CodeQL required needs a separate stability review and policy change.
+
 ## Merge Flow
 
 1. Start from synced `main` and use a short `dev/<topic>` branch.
