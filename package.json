@@ -36,6 +36,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
+    "measure:performance": "npm run build && playwright test --config playwright.performance.config.ts",
     "preflight": "bash bin/checks/preflight.sh",
     "preview": "node scripts/run-astro.mjs preview",
     "test": "vitest run",

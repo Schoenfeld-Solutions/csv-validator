@@ -95,6 +95,7 @@ Local commands:
 npm ci
 npm run dev -- --host 127.0.0.1 --port 4321
 npm run preflight
+npm run measure:performance
 ```
 
 Canonical npm commands invoke Astro through the project wrapper with
@@ -112,6 +113,13 @@ Local pages:
 audit at severity `low`, governance checks, formatting checks, linting, type
 checks, unit tests with coverage, production build, public copy checks,
 Playwright smoke tests, and the Lighthouse gate.
+
+`npm run measure:performance` is an optional local Chromium baseline, not a
+timing gate. It builds the production site, validates deterministic synthetic
+1 MiB, 5 MiB, and near-10 MiB CSV files ten times each, records validation
+latency and a UI heartbeat, and writes metadata only to the ignored
+`.local/performance-baseline/report.json`. It does not store CSV row values or
+send measurements anywhere.
 
 ## Deployment
 
