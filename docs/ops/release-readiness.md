@@ -17,9 +17,10 @@ git ls-files .local docs/plans
 
 ## Pull Request Gates
 
-Pull requests targeting `main` must keep the GitHub checks `validate-pr-title`
-and `Preflight` green. `dependency-review` runs as an additional supply-chain
-signal.
+Pull requests targeting `main` must keep the GitHub checks `validate-pr-title`,
+`dependency-review`, and `Preflight` green. Dependency review fails closed when
+a pull request introduces a vulnerability of low severity or higher in a
+runtime, development, or unknown dependency scope.
 
 The PR title must follow Conventional Commits. The expected merge is a squash
 merge with a valid Conventional Commit subject.
