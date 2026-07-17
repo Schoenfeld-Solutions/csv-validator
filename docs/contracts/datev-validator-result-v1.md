@@ -36,8 +36,10 @@ declarations, entities, external references, and arbitrary processing
 instructions remain unsupported before interpretation. XML attributes may use
 single or double quotes and standard predefined or numeric character
 references. Raw ampersands, unsupported entity references, and invalid numeric
-character references fail closed. Raw XML is not included in this result schema
-or generated HTML reports.
+character references fail closed. The constrained parser bounds document
+length, node count, depth, leaf text, total text, attribute count, and attribute
+length. Exceeding a limit rejects the contract source with a stable diagnostic.
+Raw XML is not included in this result schema or generated HTML reports.
 
 The browser worker may also return a session-local data preview payload for
 the current UI session. That preview is intentionally outside this JSON result

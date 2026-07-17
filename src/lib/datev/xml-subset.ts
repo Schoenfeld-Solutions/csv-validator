@@ -2,37 +2,110 @@ export type XmlNode = {
   readonly name: string;
   readonly attributes: Readonly<Record<string, string>>;
   readonly children: readonly XmlNode[];
+  readonly text: string;
+};
+
+export type XmlSubsetLimitCode =
+  | "document-length"
+  | "node-count"
+  | "depth"
+  | "text-length"
+  | "total-text-length"
+  | "attribute-count"
+  | "attribute-length";
+
+export interface XmlSubsetLimits {
+  readonly maximumDocumentLength: number;
+  readonly maximumNodeCount: number;
+  readonly maximumDepth: number;
+  readonly maximumTextLength: number;
+  readonly maximumTotalTextLength: number;
+  readonly maximumAttributesPerNode: number;
+  readonly maximumAttributeLength: number;
+}
+
+export const DEFAULT_XML_SUBSET_LIMITS: XmlSubsetLimits = {
+  maximumDocumentLength: 2 * 1024 * 1024,
+  maximumNodeCount: 20_000,
+  maximumDepth: 8,
+  maximumTextLength: 4_096,
+  maximumTotalTextLength: 1024 * 1024,
+  maximumAttributesPerNode: 16,
+  maximumAttributeLength: 4_096,
 };
 
 export interface XmlSubsetParseResult {
   readonly root?: XmlNode;
   readonly trailingText: boolean;
   readonly unsupportedNode: boolean;
+  readonly limitExceeded?: XmlSubsetLimitCode;
 }
 
-export const parseXmlSubset = (xml: string): XmlSubsetParseResult => {
-  const stack: Array<{
-    readonly name: string;
-    readonly attributes: Readonly<Record<string, string>>;
-    readonly children: XmlNode[];
-  }> = [];
+type MutableXmlNode = {
+  readonly name: string;
+  readonly attributes: Readonly<Record<string, string>>;
+  readonly children: XmlNode[];
+  readonly textParts: string[];
+};
+
+type AttributeParseResult =
+  | { readonly attributes: Readonly<Record<string, string>> }
+  | { readonly unsupported: true }
+  | { readonly limitExceeded: XmlSubsetLimitCode };
+
+export const parseXmlSubset = (
+  xml: string,
+  limitOverrides: Partial<XmlSubsetLimits> = {}
+): XmlSubsetParseResult => {
+  const limits = { ...DEFAULT_XML_SUBSET_LIMITS, ...limitOverrides };
+  if (xml.length > limits.maximumDocumentLength) {
+    return {
+      limitExceeded: "document-length",
+      trailingText: false,
+      unsupportedNode: false,
+    };
+  }
+
+  const stack: MutableXmlNode[] = [];
   let root: XmlNode | undefined;
   let cursor = 0;
   let trailingText = false;
   let unsupportedNode = false;
+  let limitExceeded: XmlSubsetLimitCode | undefined;
+  let nodeCount = 0;
+  let totalTextLength = 0;
   const tagPattern = /<[^>]+>/g;
+
+  const consumeText = (rawText: string): void => {
+    if (rawText.trim() === "" || limitExceeded) return;
+    const current = stack.at(-1);
+    if (!current) {
+      trailingText = true;
+      return;
+    }
+    const decoded = decodeXmlValue(rawText);
+    if (decoded === undefined) {
+      unsupportedNode = true;
+      return;
+    }
+    const normalized = decoded.trim();
+    if (normalized.length > limits.maximumTextLength) {
+      limitExceeded = "text-length";
+      return;
+    }
+    totalTextLength += normalized.length;
+    if (totalTextLength > limits.maximumTotalTextLength) {
+      limitExceeded = "total-text-length";
+      return;
+    }
+    current.textParts.push(normalized);
+  };
 
   for (const match of xml.matchAll(tagPattern)) {
     const tag = match[0];
     const index = match.index ?? 0;
-    const textBetweenTags = xml.slice(cursor, index).trim();
-    if (textBetweenTags !== "") {
-      if (stack.length > 0) {
-        unsupportedNode = true;
-      } else {
-        trailingText = true;
-      }
-    }
+    consumeText(xml.slice(cursor, index));
+    if (limitExceeded) break;
     cursor = index + tag.length;
 
     if (tag.startsWith("<!--")) {
@@ -50,10 +123,15 @@ export const parseXmlSubset = (xml: string): XmlSubsetParseResult => {
         unsupportedNode = true;
         continue;
       }
+      const text = current.textParts.join("");
+      if (current.children.length > 0 && text !== "") {
+        unsupportedNode = true;
+      }
       const completed: XmlNode = {
         attributes: current.attributes,
         children: current.children,
         name: current.name,
+        text,
       };
       const parent = stack.at(-1);
       if (parent) {
@@ -75,58 +153,102 @@ export const parseXmlSubset = (xml: string): XmlSubsetParseResult => {
       unsupportedNode = true;
       continue;
     }
-    const attributes = parseAttributes(attributesText);
-    if (!attributes) {
+    const parsedAttributes = parseAttributes(attributesText, limits);
+    if ("limitExceeded" in parsedAttributes) {
+      limitExceeded = parsedAttributes.limitExceeded;
+      break;
+    }
+    if ("unsupported" in parsedAttributes) {
       unsupportedNode = true;
       continue;
     }
-    const node = { attributes, children: [], name };
+
+    nodeCount += 1;
+    if (nodeCount > limits.maximumNodeCount) {
+      limitExceeded = "node-count";
+      break;
+    }
+    if (stack.length + 1 > limits.maximumDepth) {
+      limitExceeded = "depth";
+      break;
+    }
+
+    const node: MutableXmlNode = {
+      attributes: parsedAttributes.attributes,
+      children: [],
+      name,
+      textParts: [],
+    };
     if (selfClosing) {
+      const completed: XmlNode = {
+        attributes: node.attributes,
+        children: node.children,
+        name: node.name,
+        text: "",
+      };
       const parent = stack.at(-1);
       if (parent) {
-        parent.children.push(node);
+        parent.children.push(completed);
       } else if (root) {
         unsupportedNode = true;
       } else {
-        root = node;
+        root = completed;
       }
     } else {
       stack.push(node);
     }
   }
 
-  if (xml.slice(cursor).trim() !== "") {
-    trailingText = true;
+  if (!limitExceeded) {
+    consumeText(xml.slice(cursor));
   }
-  if (stack.length > 0) {
+  if (stack.length > 0 && !limitExceeded) {
     unsupportedNode = true;
   }
 
-  return { root, trailingText, unsupportedNode };
+  return {
+    root: limitExceeded ? undefined : root,
+    trailingText,
+    unsupportedNode,
+    limitExceeded,
+  };
 };
 
 const parseAttributes = (
-  attributesText: string
-): Readonly<Record<string, string>> | undefined => {
+  attributesText: string,
+  limits: XmlSubsetLimits
+): AttributeParseResult => {
   const attributes: Record<string, string> = {};
   let cursor = 0;
+  let attributeCount = 0;
   const attributePattern = /([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(["'])(.*?)\2/gs;
   for (const match of attributesText.matchAll(attributePattern)) {
     const index = match.index ?? 0;
-    if (attributesText.slice(cursor, index).trim() !== "") return undefined;
+    if (attributesText.slice(cursor, index).trim() !== "") {
+      return { unsupported: true };
+    }
     const [, name, , value] = match;
-    const decoded = value === undefined ? undefined : decodeXmlAttribute(value);
+    const decoded = value === undefined ? undefined : decodeXmlValue(value);
     if (!name || decoded === undefined || attributes[name] !== undefined) {
-      return undefined;
+      return { unsupported: true };
+    }
+    attributeCount += 1;
+    if (attributeCount > limits.maximumAttributesPerNode) {
+      return { limitExceeded: "attribute-count" };
+    }
+    if (decoded.length > limits.maximumAttributeLength) {
+      return { limitExceeded: "attribute-length" };
     }
     attributes[name] = decoded;
     cursor = index + match[0].length;
   }
-  if (attributesText.slice(cursor).trim() !== "") return undefined;
-  return attributes;
+  if (attributesText.slice(cursor).trim() !== "") {
+    return { unsupported: true };
+  }
+  return { attributes };
 };
 
-const decodeXmlAttribute = (value: string): string | undefined => {
+const decodeXmlValue = (value: string): string | undefined => {
   let decoded = "";
   let cursor = 0;
   const referencePattern = /&(quot|apos|lt|gt|amp|#x[0-9A-Fa-f]+|#[0-9]+);/g;
@@ -144,9 +266,9 @@ const decodeXmlAttribute = (value: string): string | undefined => {
     cursor = index + match[0].length;
   }
 
-  const trailingText = value.slice(cursor);
-  if (trailingText.includes("&")) return undefined;
-  return decoded + trailingText;
+  const trailingValue = value.slice(cursor);
+  if (trailingValue.includes("&")) return undefined;
+  return decoded + trailingValue;
 };
 
 const decodeXmlReference = (reference: string): string | undefined => {

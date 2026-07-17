@@ -8,6 +8,7 @@ import {
 } from "../../src/lib/datev/contracts";
 import { importDatevXmlContractSet } from "../../src/lib/datev/custom-xml";
 import { validateDatevContent } from "../../src/lib/datev/validator";
+import { parseXmlSubset } from "../../src/lib/datev/xml-subset";
 import {
   csvLine,
   headerFor,
@@ -76,6 +77,74 @@ const expectEditableDraft = (
   expect(draft).toBeDefined();
   return draft as DatevEditableContractDraft;
 };
+
+describe("parseXmlSubset", () => {
+  it("parses text-only leaf nodes and standard character references", () => {
+    const parsed = parseXmlSubset(
+      "<FormatDescription><Format><Name> Example &amp; Co </Name><Version>13</Version></Format></FormatDescription>"
+    );
+
+    expect(parsed).toMatchObject({
+      limitExceeded: undefined,
+      trailingText: false,
+      unsupportedNode: false,
+    });
+    expect(parsed.root?.text).toBe("");
+    expect(parsed.root?.children[0]?.children).toEqual([
+      expect.objectContaining({ name: "Name", text: "Example & Co" }),
+      expect.objectContaining({ name: "Version", text: "13" }),
+    ]);
+  });
+
+  it("rejects mixed content and unsupported text references", () => {
+    expect(parseXmlSubset("<root>before<child />after</root>")).toMatchObject({
+      unsupportedNode: true,
+    });
+    expect(parseXmlSubset("<root>unsupported &copy;</root>")).toMatchObject({
+      unsupportedNode: true,
+    });
+  });
+
+  it.each([
+    {
+      expected: "document-length",
+      limits: { maximumDocumentLength: 1 },
+      xml: "<root />",
+    },
+    {
+      expected: "node-count",
+      limits: { maximumNodeCount: 1 },
+      xml: "<root><child /></root>",
+    },
+    {
+      expected: "depth",
+      limits: { maximumDepth: 1 },
+      xml: "<root><child /></root>",
+    },
+    {
+      expected: "text-length",
+      limits: { maximumTextLength: 3 },
+      xml: "<root>four</root>",
+    },
+    {
+      expected: "total-text-length",
+      limits: { maximumTextLength: 10, maximumTotalTextLength: 3 },
+      xml: "<root><first>ab</first><second>cd</second></root>",
+    },
+    {
+      expected: "attribute-count",
+      limits: { maximumAttributesPerNode: 1 },
+      xml: '<root first="1" second="2" />',
+    },
+    {
+      expected: "attribute-length",
+      limits: { maximumAttributeLength: 1 },
+      xml: '<root value="12" />',
+    },
+  ])("reports the $expected parser limit", ({ expected, limits, xml }) => {
+    expect(parseXmlSubset(xml, limits).limitExceeded).toBe(expected);
+  });
+});
 
 describe("importDatevXmlContractSet", () => {
   it("builds an uploaded contract repository from synthetic XML", () => {
@@ -372,6 +441,16 @@ describe("importDatevXmlContractSet", () => {
     );
 
     expect(diagnosticCodes(xml)).toContain("XML_CONTRACT_NODE_UNSUPPORTED");
+  });
+
+  it("rejects XML that exceeds a bounded parser limit", () => {
+    const oversizedCaption = "A".repeat(4_097);
+    const xml = validCustomContractXml().replace(
+      'caption="Konto"',
+      `caption="${oversizedCaption}"`
+    );
+
+    expect(diagnosticCodes(xml)).toContain("XML_CONTRACT_LIMIT_EXCEEDED");
   });
 
   it("rejects unsupported or raw XML attribute references fail-closed", () => {
