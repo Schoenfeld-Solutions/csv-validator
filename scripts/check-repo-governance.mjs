@@ -312,6 +312,14 @@ const validateDocumentation = async () => {
     "validate-pr-title",
     "dependency-review",
     "Preflight",
+    "Repository Security Baseline",
+    "Dependabot Security Updates",
+    "Private Vulnerability Reporting",
+    "Secret Scanning and Push Protection",
+    "CodeQL default setup",
+    "delete_branch_on_merge",
+    "automated-security-fixes",
+    "code-scanning/default-setup",
     "no bypass actors",
     "required_approving_review_count: 0",
   ]) {
@@ -322,12 +330,22 @@ const validateDocumentation = async () => {
   for (const snippet of [
     "npm run preflight",
     "dependency-review",
+    "CodeQL default setup",
     "git diff --check",
     "git ls-files .local docs/plans",
     "squash merge",
     "fast-forward",
   ]) {
     requireSnippet("docs/ops/release-readiness.md", release, snippet);
+  }
+
+  const security = await readText("SECURITY.md");
+  for (const snippet of [
+    "GitHub private vulnerability reporting",
+    "security/advisories/new",
+    "Do not include private DATEV files",
+  ]) {
+    requireSnippet("SECURITY.md", security, snippet);
   }
 };
 

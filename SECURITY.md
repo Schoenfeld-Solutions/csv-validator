@@ -13,9 +13,10 @@ are:
 
 ## Reporting Sensitive Issues
 
-Please report sensitive security issues privately to the repository owner
-instead of opening a public issue. Describe the affected path, workflow, or
-browser case, and include the smallest useful reproduction.
+Use [GitHub private vulnerability reporting](https://github.com/Schoenfeld-Solutions/csv-validator/security/advisories/new)
+for sensitive security issues instead of opening a public issue. Describe the
+affected path, workflow, or browser case, and include the smallest useful
+reproduction. Do not include private DATEV files or unrelated personal data.
 
 ## Handling Rules
 
