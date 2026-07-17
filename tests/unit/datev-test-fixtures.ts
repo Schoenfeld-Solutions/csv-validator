@@ -1,5 +1,12 @@
-import { getFields } from "../../src/lib/datev/contracts";
-import type { DatevRecognitionCode } from "../../src/lib/datev/types";
+import {
+  getFields,
+  getRules,
+  SUPPORTED_FORMATS,
+} from "../../src/lib/datev/contracts";
+import type {
+  DatevFieldRuleContract,
+  DatevRecognitionCode,
+} from "../../src/lib/datev/types";
 
 export const csvLine = (fields: readonly string[]): string =>
   fields
@@ -125,4 +132,74 @@ export const paymentTermsRow = (
     fields[Number(index)] = value;
   }
   return csvLine(fields);
+};
+
+const smallestValidFieldValue = (rule: DatevFieldRuleContract): string => {
+  if (rule.formatType === "Text") return "X";
+  if (rule.formatType === "Datum") {
+    if (rule.formatExpression === "TTMM") return "0101";
+    if (rule.formatExpression === "TTMMJJJJ") return "01012024";
+  }
+  return rule.formatType === "Konto" ? "1" : "0";
+};
+
+const csvLineWithQuotedText = (
+  values: readonly string[],
+  rules: readonly DatevFieldRuleContract[]
+): string =>
+  values
+    .map((value, index) => {
+      const forceQuote =
+        value.length > 0 && rules[index]?.formatType === "Text";
+      return forceQuote || /[;"\r\n]/.test(value)
+        ? `"${value.replaceAll('"', '""')}"`
+        : value;
+    })
+    .join(";");
+
+export const syntheticGoldenCsv = (
+  recognitionCode: DatevRecognitionCode,
+  candidateFieldNumber: number,
+  candidateValue?: string
+): string => {
+  const recognition = SUPPORTED_FORMATS.find(
+    (item) => item.recognitionCode === recognitionCode
+  );
+  if (!recognition) {
+    throw new Error(`Missing recognition contract for ${recognitionCode}`);
+  }
+
+  const rules = getRules(recognitionCode);
+  const candidateRule = rules[candidateFieldNumber - 1];
+  if (!candidateRule) {
+    throw new Error(
+      `Missing field ${candidateFieldNumber} for ${recognitionCode}`
+    );
+  }
+
+  const values = rules.map((rule) =>
+    rule.necessary ? smallestValidFieldValue(rule) : ""
+  );
+  values[candidateFieldNumber - 1] =
+    candidateValue ?? smallestValidFieldValue(candidateRule);
+  if (values.filter(Boolean).length < 2) {
+    const companionIndex = rules.findIndex(
+      (rule, index) => index !== candidateFieldNumber - 1 && rule.maxLength > 0
+    );
+    const companionRule = rules[companionIndex];
+    if (!companionRule) {
+      throw new Error(`Missing companion field for ${recognitionCode}`);
+    }
+    values[companionIndex] = smallestValidFieldValue(companionRule);
+  }
+
+  return [
+    headerFor(
+      recognition.formatCategory,
+      recognition.formatName,
+      recognition.formatVersion
+    ),
+    contractCaptionLine(recognitionCode),
+    csvLineWithQuotedText(values, rules),
+  ].join("\r\n");
 };
