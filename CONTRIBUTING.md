@@ -16,6 +16,10 @@ npm ci
 npm run preflight
 ```
 
+Use the package scripts for Astro commands. They set
+`ASTRO_TELEMETRY_DISABLED=1` through the cross-platform project wrapper; direct
+ad-hoc Astro CLI calls remain outside this repository guarantee.
+
 ## Boundaries
 
 - No server API and no upload feature.

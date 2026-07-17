@@ -94,6 +94,11 @@ npm run dev -- --host 127.0.0.1 --port 4321
 npm run preflight
 ```
 
+Canonical npm commands invoke Astro through the project wrapper with
+`ASTRO_TELEMETRY_DISABLED=1`. The deployed site has no telemetry, analytics, or
+tracking; direct ad-hoc Astro CLI use outside the project scripts follows the
+developer's local Astro preference.
+
 Local pages:
 
 - `http://127.0.0.1:4321/csv-validator/` automatic language detection and redirect

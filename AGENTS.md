@@ -32,6 +32,8 @@
 - Fast check after small documentation or tooling changes:
   `npm run check:governance`, `npm run format:check`, `git diff --check`.
 - Canonical gate before commit, push, or PR update: `npm run preflight`.
+- Canonical Astro package scripts set `ASTRO_TELEMETRY_DISABLED=1` through
+  `scripts/run-astro.mjs`; do not bypass the wrapper in repository workflows.
 - Browser E2E tests run headless by default. Headful Playwright is reserved for
   intentional local diagnostics or sample-file runs that should be observed.
 

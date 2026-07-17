@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ASTRO_TELEMETRY_DISABLED: "1"
+
 concurrency:
   group: github-pages-${{ github.ref }}
   cancel-in-progress: true

@@ -22,6 +22,7 @@ const requiredFiles = [
   "docs/contracts/datev-validator-result-v1.md",
   "docs/ops/release-readiness.md",
   "docs/ops/repository-governance.md",
+  "scripts/run-astro.mjs",
 ];
 
 const readText = async (path) => readFile(path, "utf8");
@@ -54,6 +55,7 @@ const workflowJobNames = (workflowText) =>
 const validateWorkflowBasics = (path, text) => {
   requireSnippet(path, text, "permissions:");
   requireSnippet(path, text, "concurrency:");
+  requireSnippet(path, text, 'ASTRO_TELEMETRY_DISABLED: "1"');
   forbidSnippet(path, text, "pull_request_target:");
 
   for (const jobName of workflowJobNames(text)) {
@@ -222,13 +224,18 @@ const validatePackageScripts = async () => {
   const packageJson = JSON.parse(await readText(path));
   const scripts = packageJson.scripts ?? {};
   for (const [scriptName, expectedCommand] of Object.entries({
+    astro: "node scripts/run-astro.mjs",
     "audit:ci": "npm audit --audit-level=low",
+    build: "node scripts/run-astro.mjs build",
     "check:governance": "node scripts/check-repo-governance.mjs",
     "check:public-copy": "node scripts/check-public-copy.mjs",
     "check:pr-title": "node scripts/check-pr-title.mjs",
+    dev: "node scripts/run-astro.mjs dev",
     preflight: "bash bin/checks/preflight.sh",
+    preview: "node scripts/run-astro.mjs preview",
     "test:e2e": "playwright test",
     "test:lighthouse": "node scripts/lighthouse-check.mjs",
+    typecheck: "node scripts/run-astro.mjs check && tsc --noEmit",
   })) {
     if (scripts[scriptName] !== expectedCommand) {
       errors.push(
@@ -237,6 +244,33 @@ const validatePackageScripts = async () => {
         )}`
       );
     }
+  }
+};
+
+const validateAstroTelemetryBoundary = async () => {
+  const path = "scripts/run-astro.mjs";
+  const text = await readText(path);
+  for (const snippet of [
+    'new URL("../node_modules/astro/bin/astro.mjs", import.meta.url)',
+    "process.execPath",
+    "process.argv.slice(2)",
+    'ASTRO_TELEMETRY_DISABLED: "1"',
+    'stdio: "inherit"',
+    "process.exitCode = result.status ?? 1",
+  ]) {
+    requireSnippet(path, text, snippet);
+  }
+
+  for (const documentationPath of [
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "README.md",
+  ]) {
+    requireSnippet(
+      documentationPath,
+      await readText(documentationPath),
+      "ASTRO_TELEMETRY_DISABLED=1"
+    );
   }
 };
 
@@ -420,6 +454,7 @@ await validateDependabot();
 await validateIgnores();
 await validateRuntimeBaseline();
 await validatePackageScripts();
+await validateAstroTelemetryBoundary();
 await validatePreflight();
 await validateDocumentation();
 await validateMarkdownLanguage();
